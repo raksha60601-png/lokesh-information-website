@@ -137,17 +137,40 @@
       <div class="contact-copy reveal"><span class="eyebrow">WORK WITH US</span><h2>Business & Collaboration</h2><p>Brand Collaboration, Sponsorship, Product Reviews और Business Enquiries के लिए संपर्क करें.</p>
         <div class="contact-items"><div><b>🤝 Brand Collaboration</b><span>Technology brands और creators के साथ collaboration.</span></div><div><b>📦 Product Reviews</b><span>Gadgets, Apps और Technology products के लिए review enquiries.</span></div><div><b>💼 Sponsorship</b><span>Sponsored content और promotional partnerships.</span></div></div>
       </div>
-      <form class="form reveal" id="contactForm">
-        <input required placeholder="Full Name" name="name">
-        <input required type="email" placeholder="Email Address" name="email">
-        <input placeholder="Phone Number" name="phone">
-        <input placeholder="Company / Brand Name" name="company">
-        <select name="type"><option>Brand Collaboration</option><option>Sponsorship</option><option>Product Review</option><option>Affiliate Partnership</option><option>Business Enquiry</option><option>Other</option></select>
-        <textarea required rows="5" placeholder="Your Message" name="message"></textarea>
-        <button class="btn btn-cyan" type="submit">Send Enquiry →</button>
-        <p class="form-note">Your information will only be used to respond to your enquiry.</p>
-        <p class="success" id="success">Thanks! आपका message तैयार है. इसे भेजने के लिए नीचे दिए email को configure करें.</p>
-      </form>
+      <section id="contact" class="section contact">
+
+          <div class="contact-copy reveal">
+              ...
+                </div>
+
+                  <div class="contact-items">
+                      ...
+                        </div>
+
+                          <!-- YAHAN FORM PASTE KARNA HAI -->
+                            <form action="https://formsubmit.co/Lokeshyadav588@gmail.com" method="POST">
+
+                                <input type="hidden" name="_subject" value="New Inquiry - Lokesh Information">
+
+                                    <input required type="text" name="name" placeholder="Full Name">
+                                        <input required type="email" name="email" placeholder="Email Address">
+                                            <input type="tel" name="phone" placeholder="Phone Number">
+                                                <input type="text" name="company" placeholder="Company / Brand Name">
+
+                                                    <select name="inquiry_type">
+                                                          <option value="">Select Inquiry</option>
+                                                                <option value="sponsor">Sponsor</option>
+                                                                      <option value="collaboration">Collaboration</option>
+                                                                            <option value="other">Other</option>
+                                                                                </select>
+
+                                                                                    <textarea required rows="5" name="message" placeholder="आपका संदेश"></textarea>
+
+                                                                                        <button class="btn btn-cyan" type="submit">Send Enquiry</button>
+
+                                                                                          </form>
+
+                                                                                          </section>
     </section>
   </main>
 
