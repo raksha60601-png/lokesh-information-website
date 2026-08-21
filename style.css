@@ -422,14 +422,129 @@
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   }
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   }
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  /* Accessibility */
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @media (prefers-reduced-motion: reduce) {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    *,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *::before,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        *::after {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            animation-duration: 0.01ms !important;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                animation-iteration-count: 1 !important;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    scroll-behavior: auto !important;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
-}
+
+                                            @keyframes dpFloat {
+                                              0%, 100% {
+                                                  transform: translateY(0) scale(1);
+                                                    }
+                                                      50% {
+                                                          transform: translateY(-6px) scale(1.04);
+                                                            }
+                                                            }
+
+                                                            @keyframes dpGlow {
+                                                              0%, 100% {
+                                                                  box-shadow:
+                                                                        0 0 0 2px rgba(34, 207, 255, 0.7),
+                                                                              0 0 12px rgba(34, 207, 255, 0.45);
+                                                                                }
+
+                                                                                  50% {
+                                                                                      box-shadow:
+                                                                                            0 0 0 3px rgba(34, 207, 255, 1),
+                                                                                                  0 0 28px rgba(34, 207, 255, 0.9);
+                                                                                                    }
+                                                                                                    }
+                                                                                                    .brand-mark img {
+                                                                                                        width: 64px;
+                                                                                                          height: 64px;
+                                                                                                            object-fit: cover;
+                                                                                                              border-radius: 50%;
+                                                                                                                display: block;
+                                                                                                                  animation: dpFloat 3s ease-in-out infinite;
+                                                                                                                  }
+                                                                                                    
+
+                                                                                                    /* DP */
+                                                                                                    header .brand-mark,
+                                                                                                    header .brand-mark img {
+                                                                                                      position: relative;
+                                                                                                      }
+
+                                                                                                      header .brand-mark {
+                                                                                                        width: 58px !important;
+                                                                                                          height: 58px !important;
+                                                                                                            min-width: 58px !important;
+                                                                                                              border-radius: 50%;
+                                                                                                                overflow: visible !important;
+                                                                                                                  animation: dpFloat 2.8s ease-in-out infinite;
+                                                                                                                  }
+
+                                                                                                                  header .brand-mark img {
+                                                                                                                    width: 100% !important;
+                                                                                                                      height: 100% !important;
+                                                                                                                        object-fit: cover !important;
+                                                                                                                          border-radius: 50% !important;
+                                                                                                                            display: block !important;
+                                                                                                                              animation: dpGlow 2s ease-in-out infinite;
+                                                                                                                              }
+
+                                                                                                                              /* Header */
+                                                                                                                              header {
+                                                                                                                                position: sticky;
+                                                                                                                                  top: 0;
+                                                                                                                                    z-index: 1000;
+                                                                                                                                    }
+
+                                                                                                                                    header nav {
+                                                                                                                                      display: flex;
+                                                                                                                                        align-items: center;
+                                                                                                                                          justify-content: space-between;
+                                                                                                                                            gap: 12px;
+                                                                                                                                            }
+
+                                                                                                                                            /* Subscribe button को छोटा रखो */
+                                                                                                                                            header .nav-cta {
+                                                                                                                                              width: auto !important;
+                                                                                                                                                min-width: 0 !important;
+                                                                                                                                                  padding: 10px 14px !important;
+                                                                                                                                                    font-size: 14px !important;
+                                                                                                                                                      border-radius: 10px !important;
+                                                                                                                                                        white-space: nowrap;
+                                                                                                                                                        }
+
+                                                                                                                                                        /* Mobile */
+                                                                                                                                                        @media (max-width: 700px) {
+
+                                                                                                                                                          header nav {
+                                                                                                                                                              padding: 10px 14px !important;
+                                                                                                                                                                }
+
+                                                                                                                                                                  header .brand-mark {
+                                                                                                                                                                      width: 52px !important;
+                                                                                                                                                                          height: 52px !important;
+                                                                                                                                                                              min-width: 52px !important;
+                                                                                                                                                                                }
+
+                                                                                                                                                                                  header .nav-cta {
+                                                                                                                                                                                      padding: 8px 11px !important;
+                                                                                                                                                                                          font-size: 13px !important;
+                                                                                                                                                                                            }
+
+                                                                                                                                                                                              header .menu {
+                                                                                                                                                                                                  display: block;
+                                                                                                                                                                                                    }
+
+                                                                                                                                                                                                      .hero-section {
+                                                                                                                                                                                                          padding-top: 45px !important;
+                                                                                                                                                                                                            }
+
+                                                                                                                                                                                                              .hero-section h1 {
+                                                                                                                                                                                                                  font-size: clamp(38px, 10vw, 58px) !important;
+                                                                                                                                                                                                                      line-height: 1.15 !important;
+                                                                                                                                                                                                                        }
+
+                                                                                                                                                                                                                          .hero-section p {
+                                                                                                                                                                                                                              font-size: 17px !important;
+                                                                                                                                                                                                                                  line-height: 1.7 !important;
+                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                    }
+
+                                                                                                                                                                                                                                    /* Animation बंद करने वाली setting को override */
+                                                                                                                                                                                                                                    @media (prefers-reduced-motion: reduce) {
+                                                                                                                                                                                                                                      header .brand-mark,
+                                                                                                                                                                                                                                        header .brand-mark img {
+                                                                                                                                                                                                                                            animation-duration: 2.8s !important;
+                                                                                                                                                                                                                                                animation-iteration-count: infinite !important;
+                                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                             dpGlow
