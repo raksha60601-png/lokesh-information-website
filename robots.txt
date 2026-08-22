@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://raksha60601-png.github.io/lokesh-information-website/sitemap.xml
