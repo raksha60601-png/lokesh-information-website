@@ -1,37 +1,23 @@
-# लोकेश इनफॉर्मेशन — Website
-
-यह एक static HTML/CSS/JavaScript website है। इसे GitHub Pages पर free में host किया जा सकता है।
-
-## 1. सबसे पहले links बदलें
-`index.html` में:
-- [YOUR_YOUTUBE_CHANNEL_URL]
-- [YOUR_INSTAGRAM_URL]
-- [YOUR_FACEBOOK_URL]
-- [YOUR_X_URL]
-- [YOUR_TELEGRAM_URL]
-- [VIDEO_URL_1] ... [VIDEO_URL_4]
-
-को अपने वास्तविक links से replace करें।
-
-## 2. Website चलाना
-`index.html` को browser में खोलें।
-
-## 3. GitHub Pages पर publish
-1. GitHub पर नया public repository बनाएं।
-2. `index.html`, `style.css`, `script.js` upload करें।
-3. Repository → Settings → Pages खोलें।
-4. Source में "Deploy from a branch" चुनें।
-5. Branch `main` और folder `/ (root)` चुनें।
-6. Save करें।
-7. कुछ समय बाद GitHub Pages URL मिल जाएगा।
-
-Current social links:
-- YouTube: https://www.youtube.com/@Lokeshinfo53
-- Instagram: https://www.instagram.com/lokeshyadav10101
-- Telegram: https://t.me/LokeshInformation1
-- Facebook: https://www.facebook.com/share/1EdrTAgHL3/
-
-नोट: Contact form अभी demo है। Real email submission के लिए बाद में Formspree/Google Forms जैसी service जोड़नी होगी।
-
-## Generated Brand Image
-The generated tech banner is included at `assets/lokesh-information-tech-banner.png`.
+Lokesh Information Website
+इस ZIP में आपकी responsive dark-tech website और 9 YouTube videos शामिल हैं।
+Included
+index.html
+style.css
+assets/lokesh-information-tech-banner.png
+9 supplied YouTube video links + thumbnails
+Social Links
+YouTube: https://www.youtube.com/@Lokeshinfo53
+Instagram: https://www.instagram.com/lokeshyadav10101
+Telegram: https://t.me/LokeshInformation1
+Facebook: https://www.facebook.com/share/1EdrTAgHL3/
+Free GitHub Pages
+GitHub पर Public repository बनाएं।
+इस ZIP को extract करके सभी files upload करें।
+Settings → Pages → Deploy from a branch → main → /root → Save.
+Contact Form
+Business & Collaboration form is configured for Lokeshyadav588@gmail.com using FormSubmit. On first submission, FormSubmit may send a confirmation email that must be confirmed before deliveries begin.
+Profile photo: assets/lokesh-information-dp.png
+Contact Form
+The Business & Collaboration form is connected through FormSubmit to Lokeshyadav588@gmail.com. On the first submission, FormSubmit may send a verification email to activate the form.
+Premium update
+Mobile menu, enhanced responsive layout, premium neon effects, improved video cards, hover effects, and polished contact section are included.

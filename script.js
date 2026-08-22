@@ -1,9 +1,9 @@
-const menu=document.querySelector('.menu');
-const nav=document.querySelector('.nav nav');
-if(menu&&nav){menu.addEventListener('click',()=>{nav.classList.toggle('open');nav.style.display=nav.classList.contains('open')?'flex':'';nav.style.position='absolute';nav.style.top='70px';nav.style.left='0';nav.style.right='0';nav.style.padding='18px';nav.style.flexDirection='column';nav.style.background='rgba(5,7,10,.98)';nav.style.borderBottom='1px solid rgba(255,255,255,.09)'})}
-const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('show')}),{threshold:.08});
-document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
-const form=document.getElementById('contactForm');
-const success=document.getElementById('success');
-if(form){form.addEventListener('submit',e=>{e.preventDefault();success.style.display='block';form.reset();success.textContent='Thanks! आपकी enquiry तैयार है. Business contact के लिए email जोड़ने के बाद यह form direct enquiry system से connect किया जा सकता है.'})}
-document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',()=>{if(nav&&nav.classList.contains('open')){nav.classList.remove('open');nav.style.display=''}}));
+const header=document.querySelector("header");
+const menuButton=document.createElement("button");
+menuButton.className="menu-btn";menuButton.setAttribute("aria-label","Open menu");menuButton.innerHTML="☰";
+header.insertBefore(menuButton,header.querySelector("nav"));
+menuButton.addEventListener("click",()=>header.classList.toggle("nav-open"));
+document.querySelectorAll("nav a").forEach(a=>a.addEventListener("click",()=>header.classList.remove("nav-open")));
+window.addEventListener("scroll",()=>header.classList.toggle("scrolled",window.scrollY>10));
+document.querySelectorAll("a[href^='#']").forEach(a=>a.addEventListener("click",e=>{const t=document.querySelector(a.getAttribute("href"));if(t){e.preventDefault();t.scrollIntoView({behavior:"smooth"})}}));
+const style=document.createElement("style");style.textContent=".menu-btn{display:none;background:none;border:1px solid rgba(92,220,255,.2);color:#fff;border-radius:9px;padding:7px 10px;font-size:20px;margin-left:auto}.scrolled{box-shadow:0 10px 35px rgba(0,0,0,.25)}@media(max-width:950px){.menu-btn{display:block}.nav-open .menu-btn{color:#36e6ff}}";document.head.appendChild(style);
