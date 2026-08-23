@@ -1,53 +1,12 @@
 {
   "videos": [
     {
-      "id": "o84oXpUF5pY",
-      "title": "How to Enable Live Streaming After Being Disabled",
-      "url": "https://www.youtube.com/watch?v=o84oXpUF5pY",
-      "thumbnail": "https://i.ytimg.com/vi/o84oXpUF5pY/hqdefault.jpg",
-      "published": "2026-07-04T00:30:28+00:00"
-    },
-    {
       "id": "Z-P2PO5qC_g",
       "title": "Let’s play Game 🚀🔥",
       "url": "https://www.youtube.com/watch?v=Z-P2PO5qC_g",
       "thumbnail": "https://i.ytimg.com/vi/Z-P2PO5qC_g/hqdefault.jpg",
-      "published": "2026-07-03T09:57:01+00:00"
-    },
-    {
-      "id": "eeQ2p8jLqbM",
-      "title": "How to Properly Create a YouTube Channel #youtube",
-      "url": "https://www.youtube.com/watch?v=eeQ2p8jLqbM",
-      "thumbnail": "https://i.ytimg.com/vi/eeQ2p8jLqbM/hqdefault.jpg",
-      "published": "2026-06-23T14:30:14+00:00"
-    },
-    {
-      "id": "0deuBjLhU_Q",
-      "title": "How to download CapCut | How to download CapCut #capcut #capcutdownload #howto",
-      "url": "https://www.youtube.com/watch?v=0deuBjLhU_Q",
-      "thumbnail": "https://i.ytimg.com/vi/0deuBjLhU_Q/hqdefault.jpg",
-      "published": "2026-06-18T09:30:00+00:00"
-    },
-    {
-      "id": "nTI-HMLH764",
-      "title": "Facebook otp not receive #shorts #facebook #facebookcode",
-      "url": "https://www.youtube.com/watch?v=nTI-HMLH764",
-      "thumbnail": "https://i.ytimg.com/vi/nTI-HMLH764/hqdefault.jpg",
-      "published": "2026-06-15T13:30:36+00:00"
-    },
-    {
-      "id": "ZH3w42uiJiI",
-      "title": "How to convert image or photo size from MB to KB #imageconvermbtokb #photocompress #governmentjobs",
-      "url": "https://www.youtube.com/watch?v=ZH3w42uiJiI",
-      "thumbnail": "https://i.ytimg.com/vi/ZH3w42uiJiI/hqdefault.jpg",
-      "published": "2026-05-24T10:54:25+00:00"
-    },
-    {
-      "id": "o_B3Vu0W5P0",
-      "title": "Remove Background Noise in Mobile Phone #smartphone #shortfeed #techtips #freefire #gaming",
-      "url": "https://www.youtube.com/watch?v=o_B3Vu0W5P0",
-      "thumbnail": "https://i.ytimg.com/vi/o_B3Vu0W5P0/hqdefault.jpg",
-      "published": "2026-05-23T05:14:41+00:00"
+      "published": "2026-07-03T09:57:01+00:00",
+      "type": "video"
     }
   ]
 }
