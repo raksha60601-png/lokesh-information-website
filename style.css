@@ -1217,3 +1217,57 @@ footer>small{
   }
 
 }
+/* =========================================
+   FINAL MOBILE HERO OVERLAP FIX
+   ========================================= */
+
+@media (max-width: 768px) {
+
+  .hero {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .hero > div:first-child {
+    width: 100% !important;
+    position: relative !important;
+    z-index: 20 !important;
+  }
+
+  .hero .actions {
+    position: relative !important;
+    z-index: 30 !important;
+    width: 100% !important;
+  }
+
+  .hero-art {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+
+    width: 100% !important;
+    height: 520px !important;
+    min-height: 520px !important;
+
+    margin: 40px 0 0 !important;
+    transform: none !important;
+
+    z-index: 1 !important;
+    clear: both !important;
+  }
+
+  .hero-art .phone {
+    position: absolute !important;
+    z-index: 2 !important;
+    transform: scale(.82) !important;
+  }
+
+  .hero-art .float {
+    z-index: 5 !important;
+  }
+
+}
