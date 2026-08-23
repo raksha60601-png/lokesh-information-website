@@ -13,9 +13,6 @@ CHANNEL_FILE = ROOT / "channel.json"
 
 
 def install_yt_dlp():
-    """
-    GitHub Actions में yt-dlp उपलब्ध न हो तो install करें।
-    """
     try:
         import yt_dlp  # noqa: F401
         return
@@ -35,11 +32,11 @@ def install_yt_dlp():
 
 def fetch_channel_tab(tab):
     """
-    YouTube channel की अलग-अलग tabs से videos निकालता है।
+    YouTube channel की अलग-अलग tabs से content निकालता है।
 
-    videos = normal videos
-    shorts = Shorts
-    streams = live streams
+    videos  = normal videos
+    shorts  = Shorts
+    streams = Live streams
     """
 
     channel_url = f"https://www.youtube.com/{CHANNEL_HANDLE}/{tab}"
@@ -85,10 +82,6 @@ def fetch_channel_tab(tab):
 
 
 def entry_to_video(entry, video_type):
-    """
-    yt-dlp entry को website के JSON format में बदलता है।
-    """
-
     if not entry:
         return None
 
@@ -125,11 +118,6 @@ def entry_to_video(entry, video_type):
 
 
 def get_all_videos():
-    """
-    Normal Videos और Shorts को अलग-अलग पहचानता है।
-
-    Live streams को website feed से बाहर रखा जाता है.
-    """
 
     normal_entries = fetch_channel_tab("videos")
     short_entries = fetch_channel_tab("shorts")
@@ -150,9 +138,9 @@ def get_all_videos():
     videos = []
     seen = set()
 
-    # --------------------------------
+    # =================================
     # NORMAL VIDEOS
-    # --------------------------------
+    # =================================
 
     for entry in normal_entries:
 
@@ -164,7 +152,6 @@ def get_all_videos():
         if not video_id:
             continue
 
-        # Shorts और Live को normal videos में मत डालो
         if video_id in short_ids:
             continue
 
@@ -183,9 +170,9 @@ def get_all_videos():
             videos.append(video)
             seen.add(video_id)
 
-    # --------------------------------
+    # =================================
     # SHORTS
-    # --------------------------------
+    # =================================
 
     for entry in short_entries:
 
@@ -197,7 +184,6 @@ def get_all_videos():
         if not video_id:
             continue
 
-        # Live को Shorts में भी मत डालो
         if video_id in live_ids:
             continue
 
@@ -213,35 +199,62 @@ def get_all_videos():
             videos.append(video)
             seen.add(video_id)
 
+    # =================================
+    # LIVE
+    # =================================
+
+    for entry in live_entries:
+
+        if not entry:
+            continue
+
+        video_id = entry.get("id")
+
+        if not video_id:
+            continue
+
+        if video_id in seen:
+            continue
+
+        video = entry_to_video(
+            entry,
+            "live"
+        )
+
+        if video:
+            videos.append(video)
+            seen.add(video_id)
+
     if not videos:
         raise RuntimeError(
-            "No videos or shorts were found. "
+            "No videos, shorts or live streams were found. "
             "Existing videos.json was not replaced."
         )
 
     print("-----------------------------------")
-    print(f"Total uploads found: {len(videos)}")
+    print(f"Total content found: {len(videos)}")
+
     print(
         f"Normal videos: "
         f"{sum(1 for v in videos if v['type'] == 'video')}"
     )
+
     print(
         f"Shorts: "
         f"{sum(1 for v in videos if v['type'] == 'short')}"
     )
+
     print(
-        f"Live items excluded: "
-        f"{len(live_ids)}"
+        f"Live streams: "
+        f"{sum(1 for v in videos if v['type'] == 'live')}"
     )
+
     print("-----------------------------------")
 
     return videos
 
 
 def load_existing_videos():
-    """
-    पुराने videos.json को पढ़ता है।
-    """
 
     if not VIDEOS_FILE.exists():
         return []
@@ -270,20 +283,11 @@ def load_existing_videos():
 
 
 def merge_videos(new_videos, old_videos):
-    """
-    नई और पुरानी videos को ID के आधार पर merge करता है।
-
-    नई जानकारी को priority मिलती है।
-    Duplicate videos नहीं आएंगी।
-    """
 
     merged = []
     seen = set()
 
-    # --------------------------------
-    # नई videos पहले
-    # --------------------------------
-
+    # नई videos/content पहले
     for video in new_videos:
 
         if not isinstance(video, dict):
@@ -296,10 +300,7 @@ def merge_videos(new_videos, old_videos):
             merged.append(video)
             seen.add(video_id)
 
-    # --------------------------------
-    # पुरानी videos
-    # --------------------------------
-
+    # पुराना data
     for video in old_videos:
 
         if not isinstance(video, dict):
@@ -313,15 +314,14 @@ def merge_videos(new_videos, old_videos):
         if video_id in seen:
             continue
 
-        # पुराने data में type नहीं है
-        # तो normal video मानेंगे
+        # केवल valid types रखें
         if video.get("type") not in [
             "video",
-            "short"
+            "short",
+            "live"
         ]:
             video["type"] = "video"
 
-        # पुराने data में published नहीं है
         if "published" not in video:
             video["published"] = ""
 
@@ -332,9 +332,6 @@ def merge_videos(new_videos, old_videos):
 
 
 def save_videos(videos):
-    """
-    videos.json को सुरक्षित तरीके से save करता है।
-    """
 
     data = {
         "videos": videos
@@ -357,19 +354,14 @@ def save_videos(videos):
             indent=2
         )
 
-    # JSON सफल होने के बाद ही
-    # असली file replace होगी
     temporary_file.replace(VIDEOS_FILE)
 
     print(
-        f"Saved {len(videos)} videos to videos.json"
+        f"Saved {len(videos)} content items to videos.json"
     )
 
 
 def save_channel(channel_id):
-    """
-    channel.json save करता है।
-    """
 
     uploads_playlist_id = ""
 
@@ -405,14 +397,6 @@ def save_channel(channel_id):
 
 
 def validate_videos(videos):
-    """
-    Website में खराब data जाने से रोकता है।
-
-    IMPORTANT:
-    published अब required field नहीं है,
-    क्योंकि YouTube flat-playlist में
-    upload date खाली आ सकती है।
-    """
 
     required_fields = [
         "id",
@@ -428,21 +412,20 @@ def validate_videos(videos):
         if not isinstance(video, dict):
             continue
 
-        # ID, title, URL और thumbnail जरूरी हैं
         if not all(
             video.get(field)
             for field in required_fields
         ):
             continue
 
-        # published खाली हो सकता है
         if not video.get("published"):
             video["published"] = ""
 
-        # केवल video या short
+        # अब LIVE भी valid है
         if video.get("type") not in [
             "video",
-            "short"
+            "short",
+            "live"
         ]:
             video["type"] = "video"
 
@@ -463,10 +446,8 @@ def main():
     print("Starting YouTube sync...")
     print("===================================")
 
-    # yt-dlp install/check
     install_yt_dlp()
 
-    # पुराने data को पढ़ो
     old_videos = load_existing_videos()
 
     print(
@@ -474,10 +455,8 @@ def main():
         f"{len(old_videos)}"
     )
 
-    # YouTube से videos + shorts लाओ
     new_videos = get_all_videos()
 
-    # नई और पुरानी videos merge
     videos = merge_videos(
         new_videos,
         old_videos
@@ -485,23 +464,19 @@ def main():
 
     print(
         f"After merge: "
-        f"{len(videos)} videos"
+        f"{len(videos)} content items"
     )
 
-    # Data validation
     videos = validate_videos(
         videos
     )
 
-    # अगर कुछ भी valid नहीं है
-    # तो पुरानी videos.json को replace मत करो
     if not videos:
         raise RuntimeError(
             "No valid videos found. "
             "Website data was not replaced."
         )
 
-    # Website files save करो
     save_videos(videos)
     save_channel(CHANNEL_ID)
 
@@ -509,9 +484,26 @@ def main():
     print(
         "YouTube sync completed successfully."
     )
+
     print(
-        f"Total videos: {len(videos)}"
+        f"Total content: {len(videos)}"
     )
+
+    print(
+        f"Videos: "
+        f"{sum(1 for v in videos if v['type'] == 'video')}"
+    )
+
+    print(
+        f"Shorts: "
+        f"{sum(1 for v in videos if v['type'] == 'short')}"
+    )
+
+    print(
+        f"Live: "
+        f"{sum(1 for v in videos if v['type'] == 'live')}"
+    )
+
     print("===================================")
 
 
