@@ -1,7 +1,7 @@
 /* =========================================
    LOKESH INFORMATION
    YouTube Videos / Shorts / Live
-   Dynamic Video SEO
+   Dynamic Video SEO + Auto Refresh
 ========================================= */
 
 
@@ -39,13 +39,12 @@ function escapeHTML(value) {
 
 /* =========================================
    VIDEO SEO
-   Does NOT change website meta description
 ========================================= */
 
 function addVideoSEO(videos) {
 
   document
-    .querySelectorAll('[data-video-seo="true"]')
+    .querySelectorAll('script[data-video-seo="true"]')
     .forEach((element) => element.remove());
 
   if (!Array.isArray(videos) || !videos.length) {
@@ -61,12 +60,16 @@ function addVideoSEO(videos) {
     const id = String(video.id).trim();
 
     const title =
-      video.title ||
-      "Lokesh Information Video";
+      String(
+        video.title ||
+        "Lokesh Information Video"
+      ).trim();
 
     const description =
-      video.description ||
-      `${title} — Lokesh Information पर Tech News, Smartphones, Gadgets, Apps, AI और Technology की जानकारी आसान Hindi और Hinglish में।`;
+      String(
+        video.description ||
+        `${title} — Lokesh Information पर Tech News, Smartphones, Gadgets, Apps, AI और Technology की जानकारी आसान Hindi और Hinglish में।`
+      ).trim();
 
     const thumbnail =
       video.thumbnail ||
@@ -80,29 +83,58 @@ function addVideoSEO(videos) {
     const videoUrl =
       `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
 
+    const embedUrl =
+      `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
+
     const schema = {
+
       "@context": "https://schema.org",
+
       "@type": "VideoObject",
+
       "name": title,
+
       "description": description,
-      "thumbnailUrl": [thumbnail],
+
+      "thumbnailUrl": [
+        thumbnail
+      ],
+
       "contentUrl": videoUrl,
-      "embedUrl":
-        `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`,
+
+      "embedUrl": embedUrl,
+
       "publisher": {
         "@type": "Organization",
         "name": "Lokesh Information",
         "logo": {
           "@type": "ImageObject",
-          "url":
-            "https://raksha60601-png.github.io/lokesh-information-website/assets/lokesh-information-dp.png"
+          "url": "https://raksha60601-png.github.io/lokesh-information-website/assets/lokesh-information-dp.png"
         }
       }
+
     };
+
 
     if (uploadDate) {
       schema.uploadDate = uploadDate;
     }
+
+
+    /* Optional duration */
+
+    if (video.duration) {
+      schema.duration = video.duration;
+    }
+
+
+    /* Optional author */
+
+    schema.author = {
+      "@type": "Person",
+      "name": "Lokesh Information"
+    };
+
 
     const script =
       document.createElement("script");
@@ -117,7 +149,9 @@ function addVideoSEO(videos) {
       JSON.stringify(schema);
 
     document.head.appendChild(script);
+
   });
+
 }
 
 
@@ -127,21 +161,32 @@ function addVideoSEO(videos) {
 
 function videoCard(video) {
 
-  const id = video.id;
+  const id =
+    String(video.id || "").trim();
 
-  if (!id) return "";
+  if (!id) {
+    return "";
+  }
 
-  const title = escapeHTML(
-    video.title ||
-    "Lokesh Information Video"
-  );
 
-  const description = escapeHTML(
-    video.description || ""
-  );
+  const title =
+    escapeHTML(
+      video.title ||
+      "Lokesh Information Video"
+    );
+
+
+  const description =
+    escapeHTML(
+      video.description ||
+      ""
+    );
+
 
   const type =
-    video.type || "video";
+    video.type ||
+    "video";
+
 
   const typeClass =
     type === "short"
@@ -150,11 +195,24 @@ function videoCard(video) {
       ? "live-card"
       : "video-card";
 
+
   const thumbnail =
     video.thumbnail ||
     `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
 
+
+  const publishedAt =
+    video.publishedAt ||
+    video.uploadDate ||
+    "";
+
+
+  const embedUrl =
+    `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
+
+
   return `
+
     <article
       class="youtube-card ${typeClass}"
       itemscope
@@ -177,31 +235,41 @@ function videoCard(video) {
           : ""
       }
 
+
       <meta
         itemprop="thumbnailUrl"
         content="${escapeHTML(thumbnail)}"
       >
 
+
       ${
-        video.publishedAt
+        publishedAt
           ? `
             <meta
               itemprop="uploadDate"
-              content="${escapeHTML(video.publishedAt)}"
+              content="${escapeHTML(publishedAt)}"
             >
           `
           : ""
       }
 
+
       <meta
         itemprop="embedUrl"
-        content="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}"
+        content="${embedUrl}"
       >
+
+
+      <meta
+        itemprop="contentUrl"
+        content="https://www.youtube.com/watch?v=${encodeURIComponent(id)}"
+      >
+
 
       <div class="youtube-frame">
 
         <iframe
-          src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?rel=0"
+          src="${embedUrl}?rel=0"
           title="${title}"
           loading="lazy"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -210,11 +278,16 @@ function videoCard(video) {
 
       </div>
 
-      <div class="youtube-card-title">
+
+      <div
+        class="youtube-card-title"
+        itemprop="name"
+      >
         ${title}
       </div>
 
     </article>
+
   `;
 }
 
@@ -229,12 +302,16 @@ function renderGrid(
   limit = 6
 ) {
 
-  if (!element) return;
+  if (!element) {
+    return;
+  }
+
 
   const visibleVideos =
     limit === Infinity
       ? videos
       : videos.slice(0, limit);
+
 
   if (!visibleVideos.length) {
 
@@ -247,10 +324,12 @@ function renderGrid(
     return;
   }
 
+
   element.innerHTML =
     visibleVideos
       .map(videoCard)
       .join("");
+
 }
 
 
@@ -267,10 +346,15 @@ function updateCount(
   const element =
     document.getElementById(elementId);
 
-  if (!element) return;
+
+  if (!element) {
+    return;
+  }
+
 
   element.textContent =
     `${count} ${text}`;
+
 }
 
 
@@ -289,6 +373,7 @@ async function loadYouTube() {
   const shortsGrid =
     document.getElementById("shortsGrid");
 
+
   if (
     !videosGrid ||
     !liveGrid ||
@@ -302,6 +387,7 @@ async function loadYouTube() {
     return;
   }
 
+
   try {
 
     const response =
@@ -312,6 +398,7 @@ async function loadYouTube() {
         }
       );
 
+
     if (!response.ok) {
 
       throw new Error(
@@ -320,8 +407,10 @@ async function loadYouTube() {
 
     }
 
+
     const data =
       await response.json();
+
 
     const allVideos =
       Array.isArray(data.videos)
@@ -335,7 +424,9 @@ async function loadYouTube() {
 
     const uniqueVideos = [];
 
-    const seen = new Set();
+    const seen =
+      new Set();
+
 
     allVideos.forEach((video) => {
 
@@ -346,8 +437,12 @@ async function loadYouTube() {
         return;
       }
 
+
       const id =
-        String(video.id || "").trim();
+        String(
+          video.id || ""
+        ).trim();
+
 
       if (
         !id ||
@@ -356,7 +451,9 @@ async function loadYouTube() {
         return;
       }
 
+
       seen.add(id);
+
 
       uniqueVideos.push({
         ...video,
@@ -377,11 +474,13 @@ async function loadYouTube() {
           !video.type
       );
 
+
     const liveVideos =
       uniqueVideos.filter(
         video =>
           video.type === "live"
       );
+
 
     const shorts =
       uniqueVideos.filter(
@@ -400,11 +499,13 @@ async function loadYouTube() {
       6
     );
 
+
     renderGrid(
       liveGrid,
       liveVideos,
       6
     );
+
 
     renderGrid(
       shortsGrid,
@@ -423,11 +524,13 @@ async function loadYouTube() {
       "Videos"
     );
 
+
     updateCount(
       "liveCount",
       liveVideos.length,
       "Live streams"
     );
+
 
     updateCount(
       "shortCount",
@@ -438,7 +541,6 @@ async function loadYouTube() {
 
     /* =====================================
        VIDEO SEO
-       Latest videos + shorts + live
     ===================================== */
 
     addVideoSEO([
@@ -459,12 +561,14 @@ async function loadYouTube() {
       normalVideos
     );
 
+
     setupViewAll(
       "live",
       "LIVE",
       "All Live Streams",
       liveVideos
     );
+
 
     setupViewAll(
       "shorts",
@@ -478,20 +582,30 @@ async function loadYouTube() {
       "YouTube sync successful"
     );
 
+
     console.log(
       "Videos:",
       normalVideos.length
     );
+
 
     console.log(
       "Live:",
       liveVideos.length
     );
 
+
     console.log(
       "Shorts:",
       shorts.length
     );
+
+
+    console.log(
+      "Video SEO:",
+      "Enabled"
+    );
+
 
   } catch (error) {
 
@@ -500,17 +614,20 @@ async function loadYouTube() {
       error
     );
 
+
     videosGrid.innerHTML = `
       <div class="loading">
         Videos अभी load नहीं हो सकीं।
       </div>
     `;
 
+
     liveGrid.innerHTML = `
       <div class="loading">
         Live videos अभी load नहीं हो सकीं।
       </div>
     `;
+
 
     shortsGrid.innerHTML = `
       <div class="loading">
@@ -539,7 +656,11 @@ function setupViewAll(
       `.view-all-btn[data-section="${section}"]`
     );
 
-  if (!button) return;
+
+  if (!button) {
+    return;
+  }
+
 
   button.onclick = () => {
 
@@ -548,20 +669,24 @@ function setupViewAll(
         "youtubeFullView"
       );
 
+
     const fullViewGrid =
       document.getElementById(
         "fullViewGrid"
       );
+
 
     const fullViewLabel =
       document.getElementById(
         "fullViewLabel"
       );
 
+
     const fullViewTitle =
       document.getElementById(
         "fullViewTitle"
       );
+
 
     if (
       !fullView ||
@@ -569,14 +694,19 @@ function setupViewAll(
       !fullViewLabel ||
       !fullViewTitle
     ) {
+
       return;
+
     }
+
 
     fullViewLabel.textContent =
       label;
 
+
     fullViewTitle.textContent =
       title;
+
 
     fullViewGrid.innerHTML =
       videos.length
@@ -588,6 +718,7 @@ function setupViewAll(
             इस category में अभी कोई content नहीं है।
           </div>
         `;
+
 
     fullView.hidden =
       false;
@@ -626,6 +757,7 @@ const backButton =
     "backToYoutubeSections"
   );
 
+
 backButton?.addEventListener(
   "click",
   () => {
@@ -635,9 +767,11 @@ backButton?.addEventListener(
         "youtubeFullView"
       );
 
+
     if (fullView) {
       fullView.hidden = true;
     }
+
 
     document
       .querySelectorAll(
@@ -651,6 +785,7 @@ backButton?.addEventListener(
 
         }
       );
+
 
     document
       .getElementById("videos")
