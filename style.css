@@ -1180,3 +1180,40 @@ footer>small{
     grid-column:auto;
   }
 }
+/* =========================================
+   MOBILE HERO ANIMATION FIX
+   ========================================= */
+
+@media (max-width: 768px) {
+
+  .hero {
+    overflow: hidden;
+  }
+
+  .hero-art {
+    position: relative;
+    margin-top: 35px;
+    min-height: 520px;
+    height: 520px;
+    width: 100%;
+  }
+
+  .hero .actions {
+    position: relative;
+    z-index: 10;
+  }
+
+  .hero-art {
+    z-index: 1;
+  }
+
+  .hero-art .phone {
+    transform: scale(0.85);
+    transform-origin: center top;
+  }
+
+  .hero-art .float {
+    z-index: 3;
+  }
+
+}
