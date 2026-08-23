@@ -32,7 +32,36 @@ function videoFrame(id, title = "Lokesh Information video") {
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowfullscreen>
       </iframe>
+      <div class="video-title">${safeTitle}</div>
     </div>
+  `;
+}
+
+
+/* =========================================
+   Create YouTube Section
+   ========================================= */
+
+function createSection(title, subtitle, videos) {
+  if (!videos.length) return "";
+
+  return `
+    <section class="youtube-category">
+      <div class="youtube-section-title">
+        <span>${title}</span>
+        <h3>${title}</h3>
+        <p>${videos.length} ${subtitle}</p>
+      </div>
+
+      <div class="youtube-video-grid">
+        ${videos.map((video) => {
+          return videoFrame(
+            video.id,
+            video.title || "Lokesh Information Video"
+          );
+        }).join("")}
+      </div>
+    </section>
   `;
 }
 
@@ -76,7 +105,7 @@ async function loadYouTube() {
 
 
     /* =====================================
-       Remove duplicate videos
+       Remove duplicates
        ===================================== */
 
     const uniqueVideos = [];
@@ -99,87 +128,65 @@ async function loadYouTube() {
 
 
     /* =====================================
-       Separate normal videos and Shorts
+       Separate Videos / Shorts / Live
        ===================================== */
 
     const normalVideos = uniqueVideos.filter(
-      (video) => video.type !== "short"
+      (video) =>
+        video.type === "video" ||
+        !video.type
     );
 
     const shorts = uniqueVideos.filter(
-      (video) => video.type === "short"
+      (video) =>
+        video.type === "short"
+    );
+
+    const liveVideos = uniqueVideos.filter(
+      (video) =>
+        video.type === "live"
     );
 
 
     /* =====================================
-       Show videos
+       Build Website Sections
        ===================================== */
-
-    box.className = "playlist video-grid";
 
     let html = "";
 
-
     /* Normal Videos */
-
-    if (normalVideos.length) {
-
-      html += `
-        <div class="youtube-section-title">
-          <h3>Videos</h3>
-          <p>${normalVideos.length} videos</p>
-        </div>
-      `;
-
-      html += normalVideos
-        .map((video) => {
-
-          const id = video.id;
-
-          const title =
-            video.title ||
-            "Lokesh Information Video";
-
-          return videoFrame(
-            id,
-            title
-          );
-
-        })
-        .join("");
-    }
-
+    html += createSection(
+      "🎬 Videos",
+      "Videos",
+      normalVideos
+    );
 
     /* Shorts */
+    html += createSection(
+      "📱 Shorts",
+      "Shorts",
+      shorts
+    );
 
-    if (shorts.length) {
+    /* Live */
+    html += createSection(
+      "🔴 Live",
+      "Live videos",
+      liveVideos
+    );
 
-      html += `
-        <div class="youtube-section-title">
-          <h3>Shorts</h3>
-          <p>${shorts.length} Shorts</p>
-        </div>
-      `;
 
-      html += shorts
-        .map((video) => {
+    /* =====================================
+       Display
+       ===================================== */
 
-          const id = video.id;
-
-          const title =
-            video.title ||
-            "Lokesh Information Short";
-
-          return videoFrame(
-            id,
-            title
-          );
-
-        })
-        .join("");
+    if (!html) {
+      throw new Error(
+        "No usable Videos, Shorts or Live videos found."
+      );
     }
 
-
+    box.className = "playlist youtube-sections";
     box.innerHTML = html;
 
 
@@ -188,22 +195,25 @@ async function loadYouTube() {
        ===================================== */
 
     if (status) {
-
       status.textContent =
-        `${uniqueVideos.length} videos from your YouTube channel`;
-
+        `${normalVideos.length} Videos • ${shorts.length} Shorts • ${liveVideos.length} Live`;
     }
 
+
     console.log(
-      `YouTube loaded: ${uniqueVideos.length} videos`
+      "YouTube loaded successfully."
     );
 
     console.log(
-      `Normal videos: ${normalVideos.length}`
+      `Videos: ${normalVideos.length}`
     );
 
     console.log(
       `Shorts: ${shorts.length}`
+    );
+
+    console.log(
+      `Live: ${liveVideos.length}`
     );
 
   } catch (error) {
@@ -215,7 +225,7 @@ async function loadYouTube() {
 
 
     /* =====================================
-       Playlist fallback
+       Playlist Fallback
        ===================================== */
 
     try {
@@ -270,7 +280,7 @@ async function loadYouTube() {
 
 
     /* =====================================
-       Final fallback message
+       Final Error
        ===================================== */
 
     box.className = "playlist";
@@ -291,14 +301,14 @@ async function loadYouTube() {
 
 
 /* =========================================
-   First load
+   First Load
    ========================================= */
 
 loadYouTube();
 
 
 /* =========================================
-   Auto refresh every 5 minutes
+   Auto Refresh Every 5 Minutes
    ========================================= */
 
 setInterval(
