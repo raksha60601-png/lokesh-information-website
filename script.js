@@ -1,16 +1,20 @@
 const header = document.querySelector("header");
 const menu = document.querySelector(".menu");
 
-menu?.addEventListener("click", () => header.classList.toggle("nav-open"));
+menu?.addEventListener("click", () => {
+  header?.classList.toggle("nav-open");
+});
 
-document.querySelectorAll("nav a").forEach(a =>
-  a.addEventListener("click", () => header.classList.remove("nav-open"))
-);
+document.querySelectorAll("nav a").forEach((a) => {
+  a.addEventListener("click", () => {
+    header?.classList.remove("nav-open");
+  });
+});
 
 
-// ------------------------------------
-// YouTube Video Player
-// ------------------------------------
+/* =========================================
+   YouTube Video Player
+   ========================================= */
 
 function videoFrame(id, title = "Lokesh Information video") {
   const safeTitle = String(title)
@@ -33,191 +37,271 @@ function videoFrame(id, title = "Lokesh Information video") {
 }
 
 
-// ------------------------------------
-// Load YouTube Videos + Shorts
-// ------------------------------------
+/* =========================================
+   Load YouTube Videos
+   ========================================= */
 
 async function loadYouTube() {
   const box = document.getElementById("playlistBox");
   const status = document.getElementById("syncStatus");
 
-  if (!box) return;
+  if (!box) {
+    console.warn("playlistBox not found.");
+    return;
+  }
 
   try {
-    const response = await fetch(`videos.json?ts=${Date.now()}`, {
-      cache: "no-store"
-    });
+    const response = await fetch(
+      `videos.json?ts=${Date.now()}`,
+      {
+        cache: "no-store"
+      }
+    );
 
     if (!response.ok) {
-      throw new Error(`videos.json returned ${response.status}`);
+      throw new Error(
+        `videos.json returned ${response.status}`
+      );
     }
 
     const data = await response.json();
-    const items = Array.isArray(data.videos) ? data.videos : [];
 
-    if (items.length) {
+    const videos = Array.isArray(data.videos)
+      ? data.videos
+      : [];
 
-      // -----------------------------
-      // Separate Videos and Shorts
-      // -----------------------------
-
-      const normalVideos = items.filter(video => {
-        return typeof video === "object" &&
-               video.type !== "short";
-      });
-
-      const shorts = items.filter(video => {
-        return typeof video === "object" &&
-               video.type === "short";
-      });
-
-
-      // -----------------------------
-      // Normal Videos HTML
-      // -----------------------------
-
-      let videosHTML = "";
-
-      if (normalVideos.length) {
-        videosHTML = `
-          <div class="youtube-section">
-            <div class="heading">
-              <span>VIDEOS</span>
-              <h2>Latest Videos</h2>
-              <p>Lokesh Information की नई और पुरानी YouTube videos.</p>
-            </div>
-
-            <div class="video-grid">
-              ${normalVideos.map((video, index) => {
-                const id = video.id;
-
-                const title = video.title ||
-                  `Lokesh Information — Video ${index + 1}`;
-
-                return id ? videoFrame(id, title) : "";
-              }).join("")}
-            </div>
-          </div>
-        `;
-      }
-
-
-      // -----------------------------
-      // Shorts HTML
-      // -----------------------------
-
-      let shortsHTML = "";
-
-      if (shorts.length) {
-        shortsHTML = `
-          <div class="youtube-section">
-            <div class="heading">
-              <span>YOUTUBE SHORTS</span>
-              <h2>Latest Shorts</h2>
-              <p>Lokesh Information के YouTube Shorts.</p>
-            </div>
-
-            <div class="video-grid">
-              ${shorts.map((video, index) => {
-                const id = video.id;
-
-                const title = video.title ||
-                  `Lokesh Information — Short ${index + 1}`;
-
-                return id ? videoFrame(id, title) : "";
-              }).join("")}
-            </div>
-          </div>
-        `;
-      }
-
-
-      // -----------------------------
-      // Show Everything
-      // -----------------------------
-
-      box.className = "playlist";
-
-      box.innerHTML = `
-        ${videosHTML}
-        ${shortsHTML}
-      `;
-
-
-      // -----------------------------
-      // Status
-      // -----------------------------
-
-      status.textContent =
-        `${normalVideos.length} videos • ${shorts.length} shorts`;
-
-      return;
+    if (!videos.length) {
+      throw new Error("No videos found in videos.json");
     }
 
-  } catch (error) {
-    console.warn("Could not load videos.json:", error);
-  }
 
+    /* =====================================
+       Remove duplicate videos
+       ===================================== */
 
-  // ------------------------------------
-  // Last-resort YouTube Playlist
-  // ------------------------------------
+    const uniqueVideos = [];
+    const seen = new Set();
 
-  try {
-    const response = await fetch(`channel.json?ts=${Date.now()}`, {
-      cache: "no-store"
+    videos.forEach((video) => {
+      if (!video || typeof video !== "object") {
+        return;
+      }
+
+      const id = video.id;
+
+      if (!id || seen.has(id)) {
+        return;
+      }
+
+      seen.add(id);
+      uniqueVideos.push(video);
     });
 
-    const data = await response.json();
 
-    if (data.uploadsPlaylistId) {
+    /* =====================================
+       Separate normal videos and Shorts
+       ===================================== */
 
-      box.className = "playlist";
+    const normalVideos = uniqueVideos.filter(
+      (video) => video.type !== "short"
+    );
 
-      box.innerHTML = `
-        <iframe
-          src="https://www.youtube-nocookie.com/embed?listType=playlist&list=${encodeURIComponent(data.uploadsPlaylistId)}&rel=0"
-          title="Lokesh Information YouTube uploads"
-          loading="lazy"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowfullscreen>
-        </iframe>
+    const shorts = uniqueVideos.filter(
+      (video) => video.type === "short"
+    );
+
+
+    /* =====================================
+       Show videos
+       ===================================== */
+
+    box.className = "playlist video-grid";
+
+    let html = "";
+
+
+    /* Normal Videos */
+
+    if (normalVideos.length) {
+
+      html += `
+        <div class="youtube-section-title">
+          <h3>Videos</h3>
+          <p>${normalVideos.length} videos</p>
+        </div>
       `;
 
-      status.textContent =
-        "Showing your YouTube uploads playlist";
+      html += normalVideos
+        .map((video) => {
 
-      return;
+          const id = video.id;
+
+          const title =
+            video.title ||
+            "Lokesh Information Video";
+
+          return videoFrame(
+            id,
+            title
+          );
+
+        })
+        .join("");
     }
 
+
+    /* Shorts */
+
+    if (shorts.length) {
+
+      html += `
+        <div class="youtube-section-title">
+          <h3>Shorts</h3>
+          <p>${shorts.length} Shorts</p>
+        </div>
+      `;
+
+      html += shorts
+        .map((video) => {
+
+          const id = video.id;
+
+          const title =
+            video.title ||
+            "Lokesh Information Short";
+
+          return videoFrame(
+            id,
+            title
+          );
+
+        })
+        .join("");
+    }
+
+
+    box.innerHTML = html;
+
+
+    /* =====================================
+       Status
+       ===================================== */
+
+    if (status) {
+
+      status.textContent =
+        `${uniqueVideos.length} videos from your YouTube channel`;
+
+    }
+
+    console.log(
+      `YouTube loaded: ${uniqueVideos.length} videos`
+    );
+
+    console.log(
+      `Normal videos: ${normalVideos.length}`
+    );
+
+    console.log(
+      `Shorts: ${shorts.length}`
+    );
+
   } catch (error) {
-    console.warn("Playlist fallback not ready:", error);
+
+    console.error(
+      "Could not load YouTube videos:",
+      error
+    );
+
+
+    /* =====================================
+       Playlist fallback
+       ===================================== */
+
+    try {
+
+      const response = await fetch(
+        `channel.json?ts=${Date.now()}`,
+        {
+          cache: "no-store"
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `channel.json returned ${response.status}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (data.uploadsPlaylistId) {
+
+        box.className = "playlist";
+
+        box.innerHTML = `
+          <iframe
+            src="https://www.youtube-nocookie.com/embed?listType=playlist&list=${encodeURIComponent(
+              data.uploadsPlaylistId
+            )}&rel=0"
+            title="Lokesh Information YouTube uploads"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
+        `;
+
+        if (status) {
+          status.textContent =
+            "Showing your YouTube uploads playlist";
+        }
+
+        return;
+      }
+
+    } catch (playlistError) {
+
+      console.warn(
+        "Playlist fallback not ready:",
+        playlistError
+      );
+
+    }
+
+
+    /* =====================================
+       Final fallback message
+       ===================================== */
+
+    box.className = "playlist";
+
+    box.innerHTML = `
+      <div class="loading">
+        Videos could not be loaded right now.
+        Please try again in a moment.
+      </div>
+    `;
+
+    if (status) {
+      status.textContent =
+        "YouTube sync is waiting for an update.";
+    }
   }
-
-
-  // ------------------------------------
-  // Nothing Found
-  // ------------------------------------
-
-  box.className = "playlist";
-
-  box.innerHTML = `
-    <div class="loading">
-      Videos will appear after the first YouTube sync.
-    </div>
-  `;
-
-  status.textContent =
-    "YouTube sync is waiting for the first update.";
 }
 
 
-// ------------------------------------
-// Start
-// ------------------------------------
+/* =========================================
+   First load
+   ========================================= */
 
 loadYouTube();
 
 
-// Refresh every 5 minutes
-setInterval(loadYouTube, 5 * 60 * 1000);
+/* =========================================
+   Auto refresh every 5 minutes
+   ========================================= */
+
+setInterval(
+  loadYouTube,
+  5 * 60 * 1000
+);
