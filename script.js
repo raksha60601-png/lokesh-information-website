@@ -1,6 +1,12 @@
 /* =========================================
-   HEADER / MOBILE MENU
-========================================= */
+   LOKESH INFORMATION
+   YouTube Videos / Shorts / Live
+   ========================================= */
+
+
+/* =========================================
+   MOBILE MENU
+   ========================================= */
 
 const header = document.querySelector("header");
 const menu = document.querySelector(".menu");
@@ -17,120 +23,155 @@ document.querySelectorAll("nav a").forEach((a) => {
 
 
 /* =========================================
-   YOUTUBE VIDEO CARD
-========================================= */
+   HELPERS
+   ========================================= */
 
 function escapeHTML(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 
-function videoFrame(video) {
+/* =========================================
+   CREATE VIDEO CARD
+   ========================================= */
+
+function videoCard(video) {
+
   const id = video.id;
+
+  if (!id) return "";
+
   const title = escapeHTML(
     video.title || "Lokesh Information Video"
   );
 
+  const type = video.type || "video";
+
+  const typeClass =
+    type === "short"
+      ? "short-card"
+      : type === "live"
+      ? "live-card"
+      : "video-card";
+
+
   return `
-    <div class="video-card">
+    <article class="youtube-card ${typeClass}">
 
-      <iframe
-        src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?rel=0"
-        title="${title}"
-        loading="lazy"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowfullscreen>
-      </iframe>
+      <div class="youtube-frame">
 
-      <div class="video-title">
+        <iframe
+          src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?rel=0"
+          title="${title}"
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen>
+        </iframe>
+
+      </div>
+
+      <div class="youtube-card-title">
         ${title}
       </div>
 
-    </div>
+    </article>
   `;
 }
 
 
 /* =========================================
-   SHOW VIDEOS IN GRID
-========================================= */
+   RENDER GRID
+   ========================================= */
 
-function renderGrid(element, videos, emptyText) {
+function renderGrid(element, videos, limit = 6) {
 
   if (!element) return;
 
-  if (!videos.length) {
+  const visibleVideos =
+    limit === Infinity
+      ? videos
+      : videos.slice(0, limit);
+
+
+  if (!visibleVideos.length) {
 
     element.innerHTML = `
       <div class="loading">
-        ${emptyText}
+        अभी कोई video उपलब्ध नहीं है।
       </div>
     `;
 
     return;
   }
 
-  element.innerHTML = videos
-    .map(video => videoFrame(video))
-    .join("");
+
+  element.innerHTML =
+    visibleVideos
+      .map(videoCard)
+      .join("");
 }
 
 
 /* =========================================
-   UPDATE COUNTS
-========================================= */
+   UPDATE COUNT
+   ========================================= */
 
-function updateCounts(videos, shorts, live) {
+function updateCount(elementId, count, text) {
 
-  const videoCount = document.getElementById("videoCount");
-  const shortCount = document.getElementById("shortCount");
-  const liveCount = document.getElementById("liveCount");
+  const element =
+    document.getElementById(elementId);
 
-  if (videoCount) {
-    videoCount.textContent =
-      `${videos.length} Videos`;
-  }
+  if (!element) return;
 
-  if (shortCount) {
-    shortCount.textContent =
-      `${shorts.length} Shorts`;
-  }
-
-  if (liveCount) {
-    liveCount.textContent =
-      `${live.length} Live Streams`;
-  }
+  element.textContent =
+    `${count} ${text}`;
 }
 
 
 /* =========================================
-   LOAD YOUTUBE DATA
-========================================= */
+   MAIN YOUTUBE LOADER
+   ========================================= */
 
 async function loadYouTube() {
 
   const videosGrid =
     document.getElementById("videosGrid");
 
+  const liveGrid =
+    document.getElementById("liveGrid");
+
   const shortsGrid =
     document.getElementById("shortsGrid");
 
-  const liveGrid =
-    document.getElementById("liveGrid");
+
+  if (
+    !videosGrid ||
+    !liveGrid ||
+    !shortsGrid
+  ) {
+
+    console.warn(
+      "YouTube grids not found."
+    );
+
+    return;
+  }
 
 
   try {
 
-    const response = await fetch(
-      `videos.json?ts=${Date.now()}`,
-      {
-        cache: "no-store"
-      }
-    );
+    const response =
+      await fetch(
+        `videos.json?ts=${Date.now()}`,
+        {
+          cache: "no-store"
+        }
+      );
 
 
     if (!response.ok) {
@@ -142,7 +183,8 @@ async function loadYouTube() {
     }
 
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
 
     const allVideos =
@@ -153,136 +195,168 @@ async function loadYouTube() {
 
     /* =====================================
        REMOVE DUPLICATES
-    ===================================== */
+       ===================================== */
 
     const uniqueVideos = [];
 
     const seen = new Set();
 
 
-    allVideos.forEach(video => {
+    allVideos.forEach((video) => {
 
       if (
         !video ||
-        typeof video !== "object" ||
-        !video.id
+        typeof video !== "object"
       ) {
         return;
       }
 
 
-      if (seen.has(video.id)) {
+      const id =
+        String(video.id || "").trim();
+
+
+      if (!id || seen.has(id)) {
         return;
       }
 
 
-      seen.add(video.id);
+      seen.add(id);
 
-      uniqueVideos.push(video);
+
+      uniqueVideos.push({
+        ...video,
+        id
+      });
 
     });
 
 
     /* =====================================
-       SEPARATE VIDEO TYPES
-    ===================================== */
+       SEPARATE CONTENT
+       ===================================== */
 
     const normalVideos =
-      uniqueVideos.filter(video => {
-
-        return (
+      uniqueVideos.filter(
+        video =>
           video.type === "video" ||
           !video.type
-        );
-
-      });
-
-
-    const shorts =
-      uniqueVideos.filter(video => {
-
-        return video.type === "short";
-
-      });
+      );
 
 
     const liveVideos =
-      uniqueVideos.filter(video => {
+      uniqueVideos.filter(
+        video =>
+          video.type === "live"
+      );
 
-        return video.type === "live";
 
-      });
+    const shorts =
+      uniqueVideos.filter(
+        video =>
+          video.type === "short"
+      );
 
 
     /* =====================================
-       DISPLAY EACH SECTION SEPARATELY
-    ===================================== */
+       SHOW LATEST CARDS
+       ===================================== */
 
     renderGrid(
       videosGrid,
       normalVideos,
-      "No videos available right now."
-    );
-
-
-    renderGrid(
-      shortsGrid,
-      shorts,
-      "No Shorts available right now."
+      6
     );
 
 
     renderGrid(
       liveGrid,
       liveVideos,
-      "No Live streams available right now."
+      6
+    );
+
+
+    renderGrid(
+      shortsGrid,
+      shorts,
+      6
     );
 
 
     /* =====================================
-       UPDATE COUNTS
-    ===================================== */
+       COUNTS
+       ===================================== */
 
-    updateCounts(
-      normalVideos,
-      shorts,
+    updateCount(
+      "videoCount",
+      normalVideos.length,
+      "Videos"
+    );
+
+
+    updateCount(
+      "liveCount",
+      liveVideos.length,
+      "Live streams"
+    );
+
+
+    updateCount(
+      "shortCount",
+      shorts.length,
+      "Shorts"
+    );
+
+
+    console.log(
+      "YouTube sync successful"
+    );
+
+
+    console.log(
+      "Videos:",
+      normalVideos.length
+    );
+
+
+    console.log(
+      "Live:",
+      liveVideos.length
+    );
+
+
+    console.log(
+      "Shorts:",
+      shorts.length
+    );
+
+
+    /* =====================================
+       VIEW ALL BUTTONS
+       ===================================== */
+
+    setupViewAll(
+      "videos",
+      "VIDEOS",
+      "All Videos",
+      normalVideos
+    );
+
+
+    setupViewAll(
+      "live",
+      "LIVE",
+      "All Live Streams",
       liveVideos
     );
 
 
-    console.log(
-      "YouTube sync successful."
+    setupViewAll(
+      "shorts",
+      "SHORTS",
+      "All Shorts",
+      shorts
     );
-
-
-    console.log(
-      `Videos: ${normalVideos.length}`
-    );
-
-
-    console.log(
-      `Shorts: ${shorts.length}`
-    );
-
-
-    console.log(
-      `Live: ${liveVideos.length}`
-    );
-
-
-    /* =====================================
-       SAVE DATA FOR VIEW ALL
-    ===================================== */
-
-    window.youtubeData = {
-
-      videos: normalVideos,
-
-      shorts: shorts,
-
-      live: liveVideos
-
-    };
 
 
   } catch (error) {
@@ -293,242 +367,192 @@ async function loadYouTube() {
     );
 
 
-    if (videosGrid) {
-
-      videosGrid.innerHTML = `
-        <div class="loading">
-          Videos could not be loaded right now.
-        </div>
-      `;
-
-    }
-
-
-    if (shortsGrid) {
-
-      shortsGrid.innerHTML = `
-        <div class="loading">
-          Shorts could not be loaded right now.
-        </div>
-      `;
-
-    }
-
-
-    if (liveGrid) {
-
-      liveGrid.innerHTML = `
-        <div class="loading">
-          Live streams could not be loaded right now.
-        </div>
-      `;
-
-    }
-
-  }
-
-}
-
-
-/* =========================================
-   VIEW ALL SYSTEM
-========================================= */
-
-function openFullView(type) {
-
-  const fullView =
-    document.getElementById("youtubeFullView");
-
-  const fullGrid =
-    document.getElementById("fullViewGrid");
-
-  const fullLabel =
-    document.getElementById("fullViewLabel");
-
-  const fullTitle =
-    document.getElementById("fullViewTitle");
-
-
-  if (
-    !fullView ||
-    !fullGrid
-  ) {
-    return;
-  }
-
-
-  const data =
-    window.youtubeData || {
-      videos: [],
-      shorts: [],
-      live: []
-    };
-
-
-  let items = [];
-
-  let label = "";
-
-  let title = "";
-
-
-  if (type === "videos") {
-
-    items = data.videos;
-
-    label = "▶ VIDEOS";
-
-    title = "All Videos";
-
-  }
-
-
-  if (type === "shorts") {
-
-    items = data.shorts;
-
-    label = "🟢 YOUTUBE SHORTS";
-
-    title = "All Shorts";
-
-  }
-
-
-  if (type === "live") {
-
-    items = data.live;
-
-    label = "🔴 LIVE STREAMS";
-
-    title = "All Live Streams";
-
-  }
-
-
-  if (fullLabel) {
-    fullLabel.textContent = label;
-  }
-
-
-  if (fullTitle) {
-    fullTitle.textContent = title;
-  }
-
-
-  if (!items.length) {
-
-    fullGrid.innerHTML = `
+    videosGrid.innerHTML = `
       <div class="loading">
-        No content available right now.
+        Videos अभी load नहीं हो सकीं।
       </div>
     `;
 
-  } else {
 
-    fullGrid.innerHTML =
-      items
-        .map(video => videoFrame(video))
-        .join("");
+    liveGrid.innerHTML = `
+      <div class="loading">
+        Live videos अभी load नहीं हो सकीं।
+      </div>
+    `;
+
+
+    shortsGrid.innerHTML = `
+      <div class="loading">
+        Shorts अभी load नहीं हो सके।
+      </div>
+    `;
 
   }
-
-
-  fullView.hidden = false;
-
-
-  /* Hide normal sections */
-
-  document
-    .querySelectorAll(".youtube-category")
-    .forEach(section => {
-
-      section.style.display = "none";
-
-    });
-
-
-  /* Scroll to full view */
-
-  fullView.scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
 
 }
 
 
 /* =========================================
-   BACK FROM VIEW ALL
-========================================= */
+   VIEW ALL
+   ========================================= */
 
-function closeFullView() {
+function setupViewAll(
+  section,
+  label,
+  title,
+  videos
+) {
 
-  const fullView =
-    document.getElementById("youtubeFullView");
+  const button =
+    document.querySelector(
+      `.view-all-btn[data-section="${section}"]`
+    );
 
 
-  if (!fullView) {
-    return;
-  }
+  if (!button) return;
 
 
-  fullView.hidden = true;
+  button.onclick = () => {
+
+    const fullView =
+      document.getElementById(
+        "youtubeFullView"
+      );
 
 
-  document
-    .querySelectorAll(".youtube-category")
-    .forEach(section => {
+    const fullViewGrid =
+      document.getElementById(
+        "fullViewGrid"
+      );
 
-      section.style.display = "";
+
+    const fullViewLabel =
+      document.getElementById(
+        "fullViewLabel"
+      );
+
+
+    const fullViewTitle =
+      document.getElementById(
+        "fullViewTitle"
+      );
+
+
+    if (
+      !fullView ||
+      !fullViewGrid ||
+      !fullViewLabel ||
+      !fullViewTitle
+    ) {
+      return;
+    }
+
+
+    fullViewLabel.textContent =
+      label;
+
+
+    fullViewTitle.textContent =
+      title;
+
+
+    fullViewGrid.innerHTML =
+      videos.length
+        ? videos.map(videoCard).join("")
+        : `
+          <div class="loading">
+            इस category में अभी कोई content नहीं है।
+          </div>
+        `;
+
+
+    fullView.hidden = false;
+
+
+    /* Hide normal sections */
+
+    document.querySelectorAll(
+      ".youtube-category"
+    ).forEach(sectionElement => {
+
+      if (
+        sectionElement.id !==
+        "youtubeFullView"
+      ) {
+
+        sectionElement.style.display =
+          "none";
+
+      }
 
     });
 
 
-  document
-    .getElementById("videos")
-    ?.scrollIntoView({
+    fullView.scrollIntoView({
       behavior: "smooth",
       block: "start"
     });
 
+  };
+
 }
 
 
 /* =========================================
-   VIEW ALL BUTTONS
-========================================= */
+   BACK BUTTON
+   ========================================= */
 
-document
-  .querySelectorAll(".view-all-btn")
-  .forEach(button => {
+const backButton =
+  document.getElementById(
+    "backToYoutubeSections"
+  );
 
-    button.addEventListener("click", () => {
 
-      const section =
-        button.dataset.section;
+backButton?.addEventListener(
+  "click",
+  () => {
 
-      openFullView(section);
+    const fullView =
+      document.getElementById(
+        "youtubeFullView"
+      );
+
+
+    if (fullView) {
+      fullView.hidden = true;
+    }
+
+
+    document.querySelectorAll(
+      ".youtube-category"
+    ).forEach(sectionElement => {
+
+      if (
+        sectionElement.id !==
+        "youtubeFullView"
+      ) {
+
+        sectionElement.style.display =
+          "";
+
+      }
 
     });
 
-  });
 
+    document
+      .getElementById("videos")
+      ?.scrollIntoView({
+        behavior: "smooth"
+      });
 
-/* =========================================
-   BACK BUTTON
-========================================= */
-
-document
-  .getElementById("backToYoutubeSections")
-  ?.addEventListener(
-    "click",
-    closeFullView
-  );
+  }
+);
 
 
 /* =========================================
    FIRST LOAD
-========================================= */
+   ========================================= */
 
 loadYouTube();
 
@@ -536,7 +560,7 @@ loadYouTube();
 /* =========================================
    AUTO REFRESH
    Every 5 Minutes
-========================================= */
+   ========================================= */
 
 setInterval(
   loadYouTube,
