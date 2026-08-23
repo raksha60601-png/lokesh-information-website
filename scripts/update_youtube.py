@@ -1,11 +1,15 @@
 import json
-import re
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+
+CHANNEL_ID = "UCVzNbULO0EWDiHTgUTprZ6Q"
 CHANNEL_HANDLE = "@Lokeshinfo53"
+
 ROOT = Path(__file__).resolve().parent.parent
+VIDEOS_FILE = ROOT / "videos.json"
+CHANNEL_FILE = ROOT / "channel.json"
 
 
 def fetch(url):
@@ -13,26 +17,9 @@ def fetch(url):
         url,
         headers={"User-Agent": "Mozilla/5.0"}
     )
+
     with urllib.request.urlopen(request, timeout=30) as response:
         return response.read()
-
-
-def find_channel_id():
-    url = "https://www.youtube.com/" + CHANNEL_HANDLE
-    html = fetch(url).decode("utf-8", errors="ignore")
-
-    patterns = [
-        r'"channelId":"(UC[a-zA-Z0-9_-]+)"',
-        r'"externalId":"(UC[a-zA-Z0-9_-]+)"',
-        r'"browseId":"(UC[a-zA-Z0-9_-]+)"'
-    ]
-
-    for pattern in patterns:
-        match = re.search(pattern, html)
-        if match:
-            return match.group(1)
-
-    raise RuntimeError("YouTube Channel ID नहीं मिला।")
 
 
 def get_videos(channel_id):
@@ -60,7 +47,7 @@ def get_videos(channel_id):
             videos.append({
                 "id": video_id,
                 "title": title,
-                "url": "https://www.youtube.com/watch?v=" + video_id,
+                "url": f"https://www.youtube.com/watch?v={video_id}",
                 "thumbnail": (
                     "https://i.ytimg.com/vi/"
                     + video_id
@@ -72,8 +59,110 @@ def get_videos(channel_id):
     return videos
 
 
-def main():
-    channel_id = find_channel_id()
-    videos = get_videos(channel_id)
+def load_existing_videos():
+    if not VIDEOS_FILE.exists():
+        return []
 
-   
+    try:
+        with open(VIDEOS_FILE, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        videos = data.get("videos", [])
+
+        if isinstance(videos, list):
+            return videos
+
+    except Exception:
+        pass
+
+    return []
+
+
+def merge_videos(new_videos, old_videos):
+    merged = []
+    seen = set()
+
+    # नई videos पहले
+    for video in new_videos:
+        video_id = video.get("id")
+
+        if video_id and video_id not in seen:
+            merged.append(video)
+            seen.add(video_id)
+
+    # पुरानी videos भी सुरक्षित रहें
+    for video in old_videos:
+        video_id = video.get("id")
+
+        if video_id and video_id not in seen:
+            merged.append(video)
+            seen.add(video_id)
+
+    return merged
+
+
+def save_videos(videos):
+    data = {
+        "videos": videos
+    }
+
+    with open(VIDEOS_FILE, "w", encoding="utf-8") as file:
+        json.dump(
+            data,
+            file,
+            ensure_ascii=False,
+            indent=2
+        )
+
+    print(f"Saved {len(videos)} videos to videos.json")
+
+
+def save_channel(channel_id):
+    # YouTube uploads playlist का standard ID
+    uploads_playlist_id = ""
+
+    if channel_id.startswith("UC"):
+        uploads_playlist_id = "UU" + channel_id[2:]
+
+    data = {
+        "channelId": channel_id,
+        "uploadsPlaylistId": uploads_playlist_id,
+        "channelUrl": (
+            "https://www.youtube.com/channel/"
+            + channel_id
+        ),
+        "handle": CHANNEL_HANDLE
+    }
+
+    with open(CHANNEL_FILE, "w", encoding="utf-8") as file:
+        json.dump(
+            data,
+            file,
+            ensure_ascii=False,
+            indent=2
+        )
+
+    print("Saved channel.json")
+
+
+def main():
+    print("Starting YouTube sync...")
+
+    channel_id = CHANNEL_ID
+
+    print(f"Channel: {CHANNEL_HANDLE}")
+    print(f"Channel ID: {channel_id}")
+
+    new_videos = get_videos(channel_id)
+    old_videos = load_existing_videos()
+
+    videos = merge_videos(new_videos, old_videos)
+
+    save_videos(videos)
+    save_channel(channel_id)
+
+    print("YouTube sync completed successfully.")
+
+
+if __name__ == "__main__":
+    main()
