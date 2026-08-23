@@ -43,21 +43,39 @@ function escapeHTML(value) {
 
 function addVideoSEO(videos) {
 
+  /* Remove old dynamic VideoObject data */
   document
     .querySelectorAll('script[data-video-seo="true"]')
     .forEach((element) => element.remove());
+
 
   if (!Array.isArray(videos) || !videos.length) {
     return;
   }
 
+
+  /* Google SEO data for latest 20 videos */
   const validVideos = videos
     .filter(video => video && video.id)
     .slice(0, 20);
 
+
+  const seen = new Set();
+
+
   validVideos.forEach((video) => {
 
-    const id = String(video.id).trim();
+    const id =
+      String(video.id).trim();
+
+
+    /* Avoid duplicate VideoObject */
+    if (!id || seen.has(id)) {
+      return;
+    }
+
+    seen.add(id);
+
 
     const title =
       String(
@@ -65,26 +83,39 @@ function addVideoSEO(videos) {
         "Lokesh Information Video"
       ).trim();
 
+
     const description =
       String(
         video.description ||
-        `${title} — Lokesh Information पर Tech News, Smartphones, Gadgets, Apps, AI और Technology की जानकारी आसान Hindi और Hinglish में।`
+        `${title}. Lokesh Information पर Tech News, Smartphones, Gadgets, Apps, AI Tools और Technology की जानकारी आसान Hindi और Hinglish में।`
       ).trim();
+
 
     const thumbnail =
       video.thumbnail ||
       `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
 
+
+    /*
+      Different JSON files may use:
+      publishedAt
+      uploadDate
+      published
+    */
     const uploadDate =
       video.publishedAt ||
       video.uploadDate ||
+      video.published ||
       null;
+
 
     const videoUrl =
       `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
 
+
     const embedUrl =
       `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
+
 
     const schema = {
 
@@ -100,8 +131,6 @@ function addVideoSEO(videos) {
         thumbnail
       ],
 
-      "contentUrl": videoUrl,
-
       "embedUrl": embedUrl,
 
       "publisher": {
@@ -111,42 +140,69 @@ function addVideoSEO(videos) {
           "@type": "ImageObject",
           "url": "https://raksha60601-png.github.io/lokesh-information-website/assets/lokesh-information-dp.png"
         }
-      }
+      },
+
+      "author": {
+        "@type": "Person",
+        "name": "Lokesh Information"
+      },
+
+      "url": videoUrl
 
     };
 
 
+    /*
+      IMPORTANT:
+      contentUrl normally means the actual video-file URL.
+      Since YouTube does not expose your MP4 file URL,
+      we don't pretend the YouTube watch URL is the video file.
+    */
+
+
+    /* Add uploadDate only when real date exists */
     if (uploadDate) {
-      schema.uploadDate = uploadDate;
+
+      const dateString =
+        String(uploadDate).trim();
+
+
+      if (
+        /^\d{4}-\d{2}-\d{2}/.test(dateString)
+      ) {
+
+        schema.uploadDate =
+          dateString;
+
+      }
+
     }
 
 
     /* Optional duration */
-
     if (video.duration) {
-      schema.duration = video.duration;
+
+      schema.duration =
+        String(video.duration).trim();
+
     }
-
-
-    /* Optional author */
-
-    schema.author = {
-      "@type": "Person",
-      "name": "Lokesh Information"
-    };
 
 
     const script =
       document.createElement("script");
 
+
     script.type =
       "application/ld+json";
+
 
     script.dataset.videoSeo =
       "true";
 
+
     script.textContent =
       JSON.stringify(schema);
+
 
     document.head.appendChild(script);
 
@@ -163,6 +219,7 @@ function videoCard(video) {
 
   const id =
     String(video.id || "").trim();
+
 
   if (!id) {
     return "";
@@ -204,6 +261,7 @@ function videoCard(video) {
   const publishedAt =
     video.publishedAt ||
     video.uploadDate ||
+    video.published ||
     "";
 
 
@@ -261,7 +319,7 @@ function videoCard(video) {
 
 
       <meta
-        itemprop="contentUrl"
+        itemprop="url"
         content="https://www.youtube.com/watch?v=${encodeURIComponent(id)}"
       >
 
