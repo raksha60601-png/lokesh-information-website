@@ -1,774 +1,1199 @@
-import json
-import html
-from pathlib import Path
-from datetime import datetime
+/* =========================================
+   LOKESH INFORMATION
+   YouTube Videos / Shorts / Live
+   Dynamic Video SEO + Auto Refresh
+
+   DATA SOURCE:
+   videos.json
+
+   IMPORTANT:
+   VideoObject SEO uses uploadDate/publishedAt
+   directly from videos.json.
+========================================= */
 
 
-ROOT = Path(__file__).resolve().parent.parent
+/* =========================================
+   MOBILE MENU
+========================================= */
 
-VIDEOS_FILE = ROOT / "videos.json"
-VIDEOOBJECTS_FILE = ROOT / "videoobjects.json"
+const header = document.querySelector("header");
+const menu = document.querySelector(".menu");
 
-VIDEOS_DIR = ROOT / "videos"
-SHORTS_DIR = ROOT / "shorts"
-LIVE_DIR = ROOT / "live"
+menu?.addEventListener("click", () => {
+  header?.classList.toggle("nav-open");
+});
 
-SITE_URL = (
-    "https://raksha60601-png.github.io/"
-    "lokesh-information-website"
-)
-
-
-# =========================================
-# HELPERS
-# =========================================
-
-def esc(value):
-    return html.escape(str(value or ""), quote=True)
+document.querySelectorAll("nav a").forEach((a) => {
+  a.addEventListener("click", () => {
+    header?.classList.remove("nav-open");
+  });
+});
 
 
-def normalize_date(value):
+/* =========================================
+   HELPERS
+========================================= */
 
-    if not value:
-        return ""
-
-    value = str(value).strip()
-
-    if not value:
-        return ""
-
-    if len(value) == 10:
-        try:
-            datetime.strptime(value, "%Y-%m-%d")
-            return value + "T00:00:00+00:00"
-        except Exception:
-            pass
-
-    try:
-        return datetime.fromisoformat(
-            value.replace("Z", "+00:00")
-        ).isoformat()
-    except Exception:
-        return ""
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 
-def get_date(item):
+/* =========================================
+   NORMALIZE DATE
+========================================= */
 
-    if not isinstance(item, dict):
-        return ""
+function normalizeUploadDate(value) {
 
-    fields = [
-        "uploadDate",
-        "upload_date",
-        "publishedAt",
-        "published_at",
-        "published",
-        "datePublished",
-        "date",
-        "createdAt",
-        "created_at"
-    ]
+  if (!value) {
+    return null;
+  }
 
-    for field in fields:
+  const dateString = String(value).trim();
 
-        value = item.get(field)
-
-        date = normalize_date(value)
-
-        if date:
-            return date
-
-    return ""
+  if (!dateString) {
+    return null;
+  }
 
 
-# =========================================
-# LOAD VIDEOOBJECT DATES
-# =========================================
+  /* YYYY-MM-DD */
 
-def load_videoobject_dates():
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
 
-    result = {}
+    return `${dateString}T00:00:00Z`;
 
-    if not VIDEOOBJECTS_FILE.exists():
-        return result
+  }
 
-    try:
 
-        with open(
-            VIDEOOBJECTS_FILE,
-            "r",
-            encoding="utf-8"
-        ) as file:
+  /* ISO datetime */
 
-            data = json.load(file)
+  if (/^\d{4}-\d{2}-\d{2}T/.test(dateString)) {
 
-    except Exception as error:
+    const parsed = new Date(dateString);
 
-        print(
-            "Could not load videoobjects.json:",
-            error
-        )
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
 
-        return result
+  }
 
-    if isinstance(data, list):
 
-        items = data
+  /* Other valid date formats */
 
-    elif isinstance(data, dict):
+  const parsed = new Date(dateString);
 
-        items = (
-            data.get("videos")
-            or data.get("videoObjects")
-            or data.get("videoobjects")
-            or []
-        )
+  if (!Number.isNaN(parsed.getTime())) {
 
-    else:
+    return parsed.toISOString();
 
-        items = []
+  }
 
-    for item in items:
 
-        if not isinstance(item, dict):
-            continue
+  return null;
+}
 
-        video_id = str(
-            item.get("id")
-            or item.get("videoId")
-            or item.get("video_id")
-            or ""
-        ).strip()
 
-        if not video_id:
-            continue
+/* =========================================
+   GET VIDEO DATE
+========================================= */
 
-        date = get_date(item)
+function getVideoDate(video) {
 
-        if date:
-            result[video_id] = date
+  if (!video || typeof video !== "object") {
+    return null;
+  }
 
-    print(
-        "VideoObject dates loaded:",
-        len(result)
+
+  const possibleDates = [
+
+    video.uploadDate,
+
+    video.upload_date,
+
+    video.publishedAt,
+
+    video.published_at,
+
+    video.published,
+
+    video.date,
+
+    video.datePublished,
+
+    video.createdAt,
+
+    video.created_at
+
+  ];
+
+
+  for (const value of possibleDates) {
+
+    const normalized = normalizeUploadDate(value);
+
+    if (normalized) {
+      return normalized;
+    }
+
+  }
+
+
+  return null;
+}
+
+
+/* =========================================
+   GET VIDEO ID
+========================================= */
+
+function getVideoId(video) {
+
+  if (!video || typeof video !== "object") {
+    return "";
+  }
+
+
+  const possibleIds = [
+
+    video.id,
+    video.videoId,
+    video.video_id,
+    video.youtubeId,
+    video.youtube_id
+
+  ];
+
+
+  for (const value of possibleIds) {
+
+    if (!value) {
+      continue;
+    }
+
+
+    const id = String(value).trim();
+
+
+    if (/^[A-Za-z0-9_-]{6,}$/.test(id)) {
+
+      return id;
+
+    }
+
+  }
+
+
+  const possibleUrls = [
+
+    video.url,
+    video.videoUrl,
+    video.youtubeUrl,
+    video.link
+
+  ];
+
+
+  for (const value of possibleUrls) {
+
+    if (!value) {
+      continue;
+    }
+
+
+    const url = String(value).trim();
+
+
+    const match = url.match(
+      /(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/
+    );
+
+
+    if (match && match[1]) {
+
+      return match[1];
+
+    }
+
+  }
+
+
+  return "";
+}
+
+
+/* =========================================
+   REMOVE OLD VIDEO SEO
+========================================= */
+
+function removeVideoSEO() {
+
+  document
+    .querySelectorAll(
+      'script[data-video-seo="true"]'
     )
+    .forEach(
+      (element) => element.remove()
+    );
 
-    return result
-
-
-# =========================================
-# GET FINAL DATE
-# =========================================
-
-def get_final_date(video, date_map):
-
-    date = get_date(video)
-
-    if date:
-        return date
-
-    video_id = str(
-        video.get("id", "")
-    ).strip()
-
-    return date_map.get(
-        video_id,
-        ""
-    )
+}
 
 
-# =========================================
-# CREATE WATCH PAGE
-# =========================================
+/* =========================================
+   VIDEO SEO
+========================================= */
 
-def create_watch_page(video, output_file, date_map):
+function addVideoSEO(videos) {
 
-    video_id = str(
-        video.get("id", "")
-    ).strip()
+  removeVideoSEO();
 
-    if not video_id:
-        return False
 
-    title = str(
-        video.get(
-            "title",
-            "Lokesh Information Video"
-        )
-    ).strip()
+  if (
+    !Array.isArray(videos) ||
+    !videos.length
+  ) {
 
-    description = str(
-        video.get(
-            "description",
-            ""
-        )
-    ).strip()
+    return;
 
-    if not description:
+  }
 
-        description = (
-            f"{title}. "
-            "Lokesh Information पर Tech News, "
-            "Smartphones, Gadgets, Apps, AI Tools "
-            "और practical technology tutorials "
-            "आसान Hindi और Hinglish में।"
-        )
 
-    thumbnail = str(
-        video.get(
-            "thumbnail",
-            f"https://i.ytimg.com/vi/"
-            f"{video_id}/hqdefault.jpg"
-        )
-    ).strip()
+  /*
+    Google does not need hundreds of duplicate
+    VideoObject scripts on one page.
 
-    video_url = (
-        f"https://www.youtube.com/watch?v="
-        f"{video_id}"
-    )
+    Use latest 20 valid videos with dates.
+  */
 
-    embed_url = (
-        f"https://www.youtube-nocookie.com/"
-        f"embed/{video_id}"
-    )
+  const validVideos = videos
+    .filter((video) => {
 
-    page_url = (
-        f"{SITE_URL}/{output_file.relative_to(ROOT).as_posix()}"
-    )
+      if (!video || typeof video !== "object") {
+        return false;
+      }
 
-    upload_date = get_final_date(
-        video,
-        date_map
-    )
 
-    video_type = video.get(
-        "type",
-        "video"
-    )
+      const id = getVideoId(video);
 
-    # =====================================
-    # VIDEOOBJECT
-    # =====================================
+      const date = getVideoDate(video);
 
-    schema = {
 
-        "@context":
-            "https://schema.org",
+      return Boolean(id && date);
+
+    })
+    .slice(0, 20);
+
+
+  const seen = new Set();
+
+
+  validVideos.forEach((video) => {
+
+    const id = getVideoId(video);
+
+
+    if (!id || seen.has(id)) {
+      return;
+    }
+
+
+    seen.add(id);
+
+
+    const title = String(
+      video.title ||
+      "Lokesh Information Video"
+    ).trim();
+
+
+    const description = String(
+      video.description ||
+      `${title}. Lokesh Information पर Tech News, Smartphones, Gadgets, Apps, AI Tools और Technology की जानकारी आसान Hindi और Hinglish में।`
+    ).trim();
+
+
+    const uploadDate = getVideoDate(video);
+
+
+    /*
+      Safety check:
+      Never create VideoObject without uploadDate.
+    */
+
+    if (!uploadDate) {
+      return;
+    }
+
+
+    const thumbnail =
+      video.thumbnail ||
+      `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
+
+
+    const videoUrl =
+      `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
+
+
+    const embedUrl =
+      `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
+
+
+    const schema = {
+
+      "@context":
+        "https://schema.org",
+
+      "@type":
+        "VideoObject",
+
+      "name":
+        title,
+
+      "description":
+        description,
+
+      "thumbnailUrl": [
+        thumbnail
+      ],
+
+      "uploadDate":
+        uploadDate,
+
+      "embedUrl":
+        embedUrl,
+
+      "url":
+        videoUrl,
+
+      "publisher": {
 
         "@type":
-            "VideoObject",
+          "Organization",
 
         "name":
-            title,
+          "Lokesh Information",
 
-        "description":
-            description,
+        "logo": {
 
-        "thumbnailUrl": [
-            thumbnail
-        ],
+          "@type":
+            "ImageObject",
 
-        "embedUrl":
-            embed_url,
+          "url":
+            "https://raksha60601-png.github.io/lokesh-information-website/assets/lokesh-information-dp.png"
 
-        "url":
-            page_url,
-
-        "publisher": {
-
-            "@type":
-                "Organization",
-
-            "name":
-                "Lokesh Information",
-
-            "logo": {
-
-                "@type":
-                    "ImageObject",
-
-                "url":
-                    f"{SITE_URL}/assets/"
-                    "lokesh-information-dp.png"
-            }
-        },
-
-        "author": {
-
-            "@type":
-                "Person",
-
-            "name":
-                "Lokesh Information"
-        }
-    }
-
-    # IMPORTANT:
-    # Only add uploadDate when we actually
-    # have a real date. Never invent one.
-
-    if upload_date:
-
-        schema["uploadDate"] = upload_date
-
-    # =====================================
-    # LIVE
-    # =====================================
-
-    if video_type == "live" and upload_date:
-
-        schema["publication"] = {
-
-            "@type":
-                "BroadcastEvent",
-
-            "isLiveBroadcast":
-                False,
-
-            "startDate":
-                upload_date
         }
 
-    schema_json = json.dumps(
-        schema,
-        ensure_ascii=False,
-        indent=2
-    )
+      }
 
-    # =====================================
-    # PAGE HTML
-    # =====================================
+    };
 
-    html_page = f"""<!doctype html>
-<html lang="hi">
 
-<head>
+    /*
+      Add duration only if available.
+    */
 
-  <meta charset="utf-8">
+    if (video.duration) {
 
-  <title>{esc(title)} | Lokesh Information</title>
+      schema.duration =
+        String(video.duration).trim();
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
-
-  <meta
-    name="description"
-    content="{esc(description[:300])}"
-  >
-
-  <meta
-    name="robots"
-    content="index, follow, max-video-preview:-1"
-  >
-
-  <link
-    rel="canonical"
-    href="{esc(page_url)}"
-  >
-
-  <link
-    rel="icon"
-    type="image/png"
-    href="../assets/lokesh-information-dp.png"
-  >
-
-  <link
-    rel="stylesheet"
-    href="../style.css"
-  >
-
-  <script type="application/ld+json">
-{schema_json}
-  </script>
-
-</head>
-
-<body>
-
-<header>
-
-  <a
-    class="brand"
-    href="../index.html"
-  >
-
-    <img
-      src="../assets/lokesh-information-dp.png"
-      alt="Lokesh Information"
-      width="56"
-      height="56"
-    >
-
-    <span>
-      <strong>Lokesh Information</strong>
-      <small>Tech • News • Gadgets</small>
-    </span>
-
-  </a>
-
-  <nav>
-
-    <a href="../index.html">Home</a>
-    <a href="../videos.html">Videos</a>
-    <a href="../shorts.html">Shorts</a>
-    <a href="../live.html">Live</a>
-
-  </nav>
-
-</header>
-
-
-<main>
-
-<section class="about">
-
-  <div>
-
-    <span>VIDEO</span>
-
-    <h1>
-      {esc(title)}
-    </h1>
-
-    <p>
-      {esc(description)}
-    </p>
-
-  </div>
-
-</section>
-
-
-<section id="video-watch">
-
-  <div class="youtube-frame">
-
-    <iframe
-      src="{esc(embed_url)}?rel=0"
-      title="{esc(title)}"
-      loading="eager"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      allowfullscreen>
-    </iframe>
-
-  </div>
-
-</section>
-
-
-<section class="about">
-
-  <div>
-
-    <h2>
-      Watch on YouTube
-    </h2>
-
-    <p>
-      यह वीडियो Lokesh Information के
-      official YouTube channel से है।
-    </p>
-
-    <a
-      class="btn red"
-      href="{esc(video_url)}"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      ▶ Watch on YouTube
-    </a>
-
-    <a
-      class="btn"
-      href="../index.html"
-    >
-      ← Back to Lokesh Information
-    </a>
-
-  </div>
-
-</section>
-
-</main>
-
-
-<footer>
-
-  <div class="footer-brand">
-
-    <strong>
-      Lokesh Information
-    </strong>
-
-    <p>
-      Tech • News • Gadgets • Apps • AI
-    </p>
-
-  </div>
-
-  <small>
-    © 2026 Lokesh Information.
-    All rights reserved.
-  </small>
-
-</footer>
-
-</body>
-
-</html>
-"""
-
-    output_file.parent.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
-    with open(
-        output_file,
-        "w",
-        encoding="utf-8"
-    ) as file:
-
-        file.write(html_page)
-
-    return True
-
-
-# =========================================
-# CREATE SITEMAP
-# =========================================
-
-def create_sitemap(pages):
-
-    sitemap_file = ROOT / "sitemap.xml"
-
-    today = datetime.utcnow().strftime(
-        "%Y-%m-%d"
-    )
-
-    urls = []
-
-    # Homepage
-
-    urls.append(
-        f"""
-  <url>
-    <loc>{SITE_URL}/</loc>
-    <lastmod>{today}</lastmod>
-  </url>"""
-    )
-
-    # Individual video pages
-
-    for page in pages:
-
-        relative = page.relative_to(
-            ROOT
-        ).as_posix()
-
-        urls.append(
-            f"""
-  <url>
-    <loc>{SITE_URL}/{relative}</loc>
-    <lastmod>{today}</lastmod>
-  </url>"""
-        )
-
-    sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
-
-<urlset
-  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
->
-
-{"".join(urls)}
-
-</urlset>
-"""
-
-    with open(
-        sitemap_file,
-        "w",
-        encoding="utf-8"
-    ) as file:
-
-        file.write(sitemap)
-
-    print(
-        "Sitemap created:",
-        sitemap_file
-    )
-
-
-# =========================================
-# MAIN
-# =========================================
-
-def main():
-
-    print(
-        "==================================="
-    )
-
-    print(
-        "Generating individual video pages..."
-    )
-
-    print(
-        "==================================="
-    )
-
-    if not VIDEOS_FILE.exists():
-
-        raise RuntimeError(
-            "videos.json not found."
-        )
-
-    with open(
-        VIDEOS_FILE,
-        "r",
-        encoding="utf-8"
-    ) as file:
-
-        data = json.load(file)
-
-    videos = data.get(
-        "videos",
-        []
-    )
-
-    if not isinstance(
-        videos,
-        list
-    ):
-
-        raise RuntimeError(
-            "videos.json has invalid format."
-        )
-
-    date_map = (
-        load_videoobject_dates()
-    )
-
-    pages = []
-
-    counts = {
-        "video": 0,
-        "short": 0,
-        "live": 0
     }
 
-    seen = set()
 
-    for video in videos:
+    /*
+      Live video information.
+    */
 
-        if not isinstance(
-            video,
-            dict
-        ):
-            continue
+    if (
+      video.type === "live"
+    ) {
 
-        video_id = str(
-            video.get("id", "")
-        ).strip()
+      schema.publication = {
 
-        if not video_id:
-            continue
+        "@type":
+          "BroadcastEvent",
 
-        if video_id in seen:
-            continue
+        "isLiveBroadcast":
+          false,
 
-        seen.add(video_id)
+        "startDate":
+          uploadDate
 
-        video_type = video.get(
-            "type",
-            "video"
-        )
+      };
 
-        if video_type == "short":
-
-            output_file = (
-                SHORTS_DIR
-                / f"{video_id}.html"
-            )
-
-        elif video_type == "live":
-
-            output_file = (
-                LIVE_DIR
-                / f"{video_id}.html"
-            )
-
-        else:
-
-            output_file = (
-                VIDEOS_DIR
-                / f"{video_id}.html"
-            )
-
-            video_type = "video"
-
-        success = create_watch_page(
-            video,
-            output_file,
-            date_map
-        )
-
-        if success:
-
-            pages.append(
-                output_file
-            )
-
-            counts[
-                video_type
-            ] += 1
-
-    create_sitemap(
-        pages
-    )
-
-    print(
-        "-----------------------------------"
-    )
-
-    print(
-        "Individual pages generated:",
-        len(pages)
-    )
-
-    print(
-        "Normal videos:",
-        counts["video"]
-    )
-
-    print(
-        "Shorts:",
-        counts["short"]
-    )
-
-    print(
-        "Live:",
-        counts["live"]
-    )
-
-    print(
-        "Pages with dates:",
-        sum(
-            1
-            for video in videos
-            if get_final_date(
-                video,
-                date_map
-            )
-        )
-    )
-
-    print(
-        "-----------------------------------"
-    )
+    }
 
 
-if __name__ == "__main__":
-    main()
+    const script =
+      document.createElement("script");
+
+
+    script.type =
+      "application/ld+json";
+
+
+    script.dataset.videoSeo =
+      "true";
+
+
+    script.textContent =
+      JSON.stringify(schema);
+
+
+    document.head.appendChild(script);
+
+  });
+
+
+  console.log(
+    "VideoObject SEO created:",
+    seen.size
+  );
+
+}
+
+
+/* =========================================
+   CREATE VIDEO CARD
+========================================= */
+
+function videoCard(video) {
+
+  const id =
+    String(video.id || "").trim();
+
+
+  if (!id) {
+    return "";
+  }
+
+
+  const title =
+    escapeHTML(
+      video.title ||
+      "Lokesh Information Video"
+    );
+
+
+  const description =
+    escapeHTML(
+      video.description ||
+      ""
+    );
+
+
+  const type =
+    video.type ||
+    "video";
+
+
+  const typeClass =
+    type === "short"
+      ? "short-card"
+      : type === "live"
+      ? "live-card"
+      : "video-card";
+
+
+  const thumbnail =
+    video.thumbnail ||
+    `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
+
+
+  const publishedAt =
+    getVideoDate(video);
+
+
+  const embedUrl =
+    `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
+
+
+  /*
+    IMPORTANT:
+
+    Only add VideoObject microdata when
+    a valid uploadDate exists.
+
+    This prevents Google's
+    "Missing field uploadDate" error.
+  */
+
+  const schemaAttributes =
+    publishedAt
+      ? `
+        itemscope
+        itemtype="https://schema.org/VideoObject"
+      `
+      : "";
+
+
+  const nameMeta =
+    publishedAt
+      ? `
+        <meta
+          itemprop="name"
+          content="${title}"
+        >
+      `
+      : "";
+
+
+  const descriptionMeta =
+    publishedAt && description
+      ? `
+        <meta
+          itemprop="description"
+          content="${description}"
+        >
+      `
+      : "";
+
+
+  const thumbnailMeta =
+    publishedAt
+      ? `
+        <meta
+          itemprop="thumbnailUrl"
+          content="${escapeHTML(thumbnail)}"
+        >
+      `
+      : "";
+
+
+  const dateMeta =
+    publishedAt
+      ? `
+        <meta
+          itemprop="uploadDate"
+          content="${escapeHTML(publishedAt)}"
+        >
+      `
+      : "";
+
+
+  const embedMeta =
+    publishedAt
+      ? `
+        <meta
+          itemprop="embedUrl"
+          content="${embedUrl}"
+        >
+      `
+      : "";
+
+
+  const urlMeta =
+    publishedAt
+      ? `
+        <meta
+          itemprop="url"
+          content="https://www.youtube.com/watch?v=${encodeURIComponent(id)}"
+        >
+      `
+      : "";
+
+
+  return `
+
+    <article
+      class="youtube-card ${typeClass}"
+      ${schemaAttributes}
+    >
+
+      ${nameMeta}
+
+      ${descriptionMeta}
+
+      ${thumbnailMeta}
+
+      ${dateMeta}
+
+      ${embedMeta}
+
+      ${urlMeta}
+
+
+      <div class="youtube-frame">
+
+        <iframe
+          src="${embedUrl}?rel=0"
+          title="${title}"
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen>
+        </iframe>
+
+      </div>
+
+
+      <div
+        class="youtube-card-title"
+        ${publishedAt ? 'itemprop="name"' : ""}
+      >
+        ${title}
+      </div>
+
+    </article>
+
+  `;
+
+}
+
+
+/* =========================================
+   RENDER GRID
+========================================= */
+
+function renderGrid(
+  element,
+  videos,
+  limit = 6
+) {
+
+  if (!element) {
+    return;
+  }
+
+
+  const visibleVideos =
+    limit === Infinity
+      ? videos
+      : videos.slice(0, limit);
+
+
+  if (!visibleVideos.length) {
+
+    element.innerHTML = `
+      <div class="loading">
+        अभी कोई video उपलब्ध नहीं है।
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  element.innerHTML =
+    visibleVideos
+      .map(videoCard)
+      .join("");
+
+}
+
+
+/* =========================================
+   UPDATE COUNT
+========================================= */
+
+function updateCount(
+  elementId,
+  count,
+  text
+) {
+
+  const element =
+    document.getElementById(elementId);
+
+
+  if (!element) {
+    return;
+  }
+
+
+  element.textContent =
+    `${count} ${text}`;
+
+}
+
+
+/* =========================================
+   MAIN YOUTUBE LOADER
+========================================= */
+
+async function loadYouTube() {
+
+  const videosGrid =
+    document.getElementById("videosGrid");
+
+  const liveGrid =
+    document.getElementById("liveGrid");
+
+  const shortsGrid =
+    document.getElementById("shortsGrid");
+
+
+  if (
+    !videosGrid ||
+    !liveGrid ||
+    !shortsGrid
+  ) {
+
+    console.warn(
+      "YouTube grids not found."
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    /*
+      Only videos.json is required.
+    */
+
+    const response =
+      await fetch(
+        `videos.json?ts=${Date.now()}`,
+        {
+          cache: "no-store"
+        }
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        `videos.json returned ${response.status}`
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    const allVideos =
+      Array.isArray(data.videos)
+        ? data.videos
+        : [];
+
+
+    /* =====================================
+       REMOVE DUPLICATES
+    ===================================== */
+
+    const uniqueVideos = [];
+
+    const seen = new Set();
+
+
+    allVideos.forEach((video) => {
+
+      if (
+        !video ||
+        typeof video !== "object"
+      ) {
+
+        return;
+
+      }
+
+
+      const id =
+        getVideoId(video);
+
+
+      if (
+        !id ||
+        seen.has(id)
+      ) {
+
+        return;
+
+      }
+
+
+      seen.add(id);
+
+
+      uniqueVideos.push({
+
+        ...video,
+
+        id
+
+      });
+
+    });
+
+
+    /* =====================================
+       SEPARATE CONTENT
+    ===================================== */
+
+    const normalVideos =
+      uniqueVideos.filter(
+        video =>
+          video.type === "video" ||
+          !video.type
+      );
+
+
+    const liveVideos =
+      uniqueVideos.filter(
+        video =>
+          video.type === "live"
+      );
+
+
+    const shorts =
+      uniqueVideos.filter(
+        video =>
+          video.type === "short"
+      );
+
+
+    /* =====================================
+       SHOW LATEST 6
+    ===================================== */
+
+    renderGrid(
+      videosGrid,
+      normalVideos,
+      6
+    );
+
+
+    renderGrid(
+      liveGrid,
+      liveVideos,
+      6
+    );
+
+
+    renderGrid(
+      shortsGrid,
+      shorts,
+      6
+    );
+
+
+    /* =====================================
+       COUNTS
+    ===================================== */
+
+    updateCount(
+      "videoCount",
+      normalVideos.length,
+      "Videos"
+    );
+
+
+    updateCount(
+      "liveCount",
+      liveVideos.length,
+      "Live streams"
+    );
+
+
+    updateCount(
+      "shortCount",
+      shorts.length,
+      "Shorts"
+    );
+
+
+    /* =====================================
+       VIDEO SEO
+    ===================================== */
+
+    addVideoSEO(uniqueVideos);
+
+
+    /* =====================================
+       VIEW ALL
+    ===================================== */
+
+    setupViewAll(
+      "videos",
+      "VIDEOS",
+      "All Videos",
+      normalVideos
+    );
+
+
+    setupViewAll(
+      "live",
+      "LIVE",
+      "All Live Streams",
+      liveVideos
+    );
+
+
+    setupViewAll(
+      "shorts",
+      "SHORTS",
+      "All Shorts",
+      shorts
+    );
+
+
+    /* =====================================
+       CONSOLE INFORMATION
+    ===================================== */
+
+    console.log(
+      "YouTube sync successful"
+    );
+
+
+    console.log(
+      "Total content:",
+      uniqueVideos.length
+    );
+
+
+    console.log(
+      "Videos:",
+      normalVideos.length
+    );
+
+
+    console.log(
+      "Live:",
+      liveVideos.length
+    );
+
+
+    console.log(
+      "Shorts:",
+      shorts.length
+    );
+
+
+    console.log(
+      "Videos with uploadDate:",
+      uniqueVideos.filter(
+        video => getVideoDate(video)
+      ).length
+    );
+
+
+    console.log(
+      "Video SEO:",
+      "Enabled"
+    );
+
+
+  }
+  catch (error) {
+
+    console.error(
+      "Could not load YouTube videos:",
+      error
+    );
+
+
+    videosGrid.innerHTML = `
+      <div class="loading">
+        Videos अभी load नहीं हो सकीं।
+      </div>
+    `;
+
+
+    liveGrid.innerHTML = `
+      <div class="loading">
+        Live videos अभी load नहीं हो सकीं।
+      </div>
+    `;
+
+
+    shortsGrid.innerHTML = `
+      <div class="loading">
+        Shorts अभी load नहीं हो सके।
+      </div>
+    `;
+
+  }
+
+}
+
+
+/* =========================================
+   VIEW ALL
+========================================= */
+
+function setupViewAll(
+  section,
+  label,
+  title,
+  videos
+) {
+
+  const button =
+    document.querySelector(
+      `.view-all-btn[data-section="${section}"]`
+    );
+
+
+  if (!button) {
+    return;
+  }
+
+
+  button.onclick = () => {
+
+    const fullView =
+      document.getElementById(
+        "youtubeFullView"
+      );
+
+
+    const fullViewGrid =
+      document.getElementById(
+        "fullViewGrid"
+      );
+
+
+    const fullViewLabel =
+      document.getElementById(
+        "fullViewLabel"
+      );
+
+
+    const fullViewTitle =
+      document.getElementById(
+        "fullViewTitle"
+      );
+
+
+    if (
+      !fullView ||
+      !fullViewGrid ||
+      !fullViewLabel ||
+      !fullViewTitle
+    ) {
+
+      return;
+
+    }
+
+
+    fullViewLabel.textContent =
+      label;
+
+
+    fullViewTitle.textContent =
+      title;
+
+
+    fullViewGrid.innerHTML =
+      videos.length
+
+        ? videos
+            .map(videoCard)
+            .join("")
+
+        : `
+          <div class="loading">
+            इस category में अभी कोई content नहीं है।
+          </div>
+        `;
+
+
+    fullView.hidden =
+      false;
+
+
+    document
+      .querySelectorAll(
+        ".youtube-category"
+      )
+      .forEach(
+        sectionElement => {
+
+          sectionElement.style.display =
+            "none";
+
+        }
+      );
+
+
+    fullView.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+
+  };
+
+}
+
+
+/* =========================================
+   BACK BUTTON
+========================================= */
+
+const backButton =
+  document.getElementById(
+    "backToYoutubeSections"
+  );
+
+
+backButton?.addEventListener(
+  "click",
+  () => {
+
+    const fullView =
+      document.getElementById(
+        "youtubeFullView"
+      );
+
+
+    if (fullView) {
+
+      fullView.hidden =
+        true;
+
+    }
+
+
+    document
+      .querySelectorAll(
+        ".youtube-category"
+      )
+      .forEach(
+        sectionElement => {
+
+          sectionElement.style.display =
+            "";
+
+        }
+      );
+
+
+    document
+      .getElementById(
+        "videos"
+      )
+      ?.scrollIntoView({
+        behavior: "smooth"
+      });
+
+  }
+);
+
+
+/* =========================================
+   FIRST LOAD
+========================================= */
+
+loadYouTube();
+
+
+/* =========================================
+   AUTO REFRESH
+   Every 5 Minutes
+========================================= */
+
+setInterval(
+  loadYouTube,
+  5 * 60 * 1000
+);
