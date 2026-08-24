@@ -1,1199 +1,1282 @@
-/* =========================================
-   LOKESH INFORMATION
-   YouTube Videos / Shorts / Live
-   Dynamic Video SEO + Auto Refresh
+import json
+import subprocess
+import sys
+from pathlib import Path
+from datetime import datetime, timezone
 
-   DATA SOURCE:
-   videos.json
 
-   IMPORTANT:
-   VideoObject SEO uses uploadDate/publishedAt
-   directly from videos.json.
-========================================= */
+# =========================================
+# LOKESH INFORMATION
+# YouTube Videos / Shorts / Live Sync
+# =========================================
 
+CHANNEL_ID = "UCVzNbULO0EWDiHTgUTprZ6Q"
+CHANNEL_HANDLE = "@Lokeshinfo53"
 
-/* =========================================
-   MOBILE MENU
-========================================= */
+ROOT = Path(__file__).resolve().parent.parent
 
-const header = document.querySelector("header");
-const menu = document.querySelector(".menu");
+VIDEOS_FILE = ROOT / "videos.json"
+CHANNEL_FILE = ROOT / "channel.json"
 
-menu?.addEventListener("click", () => {
-  header?.classList.toggle("nav-open");
-});
 
-document.querySelectorAll("nav a").forEach((a) => {
-  a.addEventListener("click", () => {
-    header?.classList.remove("nav-open");
-  });
-});
+# =========================================
+# INSTALL / CHECK YT-DLP
+# =========================================
 
+def install_yt_dlp():
 
-/* =========================================
-   HELPERS
-========================================= */
+    try:
+        import yt_dlp  # noqa: F401
 
-function escapeHTML(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+        print("yt-dlp is already installed.")
+        return
 
+    except ImportError:
 
-/* =========================================
-   NORMALIZE DATE
-========================================= */
+        print("yt-dlp not found.")
+        print("Installing yt-dlp...")
 
-function normalizeUploadDate(value) {
+        subprocess.check_call([
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--disable-pip-version-check",
+            "-U",
+            "yt-dlp"
+        ])
 
-  if (!value) {
-    return null;
-  }
+        print("yt-dlp installation completed.")
 
-  const dateString = String(value).trim();
 
-  if (!dateString) {
-    return null;
-  }
+# =========================================
+# DATE HELPERS
+# =========================================
 
+def timestamp_to_date(timestamp):
 
-  /* YYYY-MM-DD */
+    if not timestamp:
+        return ""
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    try:
 
-    return `${dateString}T00:00:00Z`;
+        timestamp = float(timestamp)
 
-  }
+        dt = datetime.fromtimestamp(
+            timestamp,
+            tz=timezone.utc
+        )
 
+        return dt.strftime("%Y-%m-%d")
 
-  /* ISO datetime */
+    except Exception:
 
-  if (/^\d{4}-\d{2}-\d{2}T/.test(dateString)) {
+        return ""
 
-    const parsed = new Date(dateString);
 
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString();
-    }
+def normalize_date(value):
 
-  }
+    if not value:
+        return ""
 
+    value = str(value).strip()
 
-  /* Other valid date formats */
+    if not value:
+        return ""
 
-  const parsed = new Date(dateString);
 
-  if (!Number.isNaN(parsed.getTime())) {
+    # =====================================
+    # YYYYMMDD
+    # =====================================
 
-    return parsed.toISOString();
+    if len(value) == 8 and value.isdigit():
 
-  }
+        try:
 
+            dt = datetime.strptime(
+                value,
+                "%Y%m%d"
+            )
 
-  return null;
-}
+            return dt.strftime("%Y-%m-%d")
 
+        except Exception:
 
-/* =========================================
-   GET VIDEO DATE
-========================================= */
+            return ""
 
-function getVideoDate(video) {
 
-  if (!video || typeof video !== "object") {
-    return null;
-  }
+    # =====================================
+    # YYYY-MM-DD
+    # =====================================
 
+    if len(value) == 10:
 
-  const possibleDates = [
+        try:
 
-    video.uploadDate,
+            dt = datetime.strptime(
+                value,
+                "%Y-%m-%d"
+            )
 
-    video.upload_date,
+            return dt.strftime("%Y-%m-%d")
 
-    video.publishedAt,
+        except Exception:
 
-    video.published_at,
+            pass
 
-    video.published,
 
-    video.date,
+    # =====================================
+    # ISO DATETIME
+    # =====================================
 
-    video.datePublished,
+    try:
 
-    video.createdAt,
+        dt = datetime.fromisoformat(
+            value.replace("Z", "+00:00")
+        )
 
-    video.created_at
+        return dt.strftime("%Y-%m-%d")
 
-  ];
+    except Exception:
 
+        pass
 
-  for (const value of possibleDates) {
 
-    const normalized = normalizeUploadDate(value);
+    return ""
 
-    if (normalized) {
-      return normalized;
-    }
 
-  }
+def get_entry_date(entry):
 
+    if not entry:
+        return ""
 
-  return null;
-}
 
+    # =====================================
+    # UPLOAD DATE
+    # =====================================
 
-/* =========================================
-   GET VIDEO ID
-========================================= */
-
-function getVideoId(video) {
-
-  if (!video || typeof video !== "object") {
-    return "";
-  }
-
-
-  const possibleIds = [
-
-    video.id,
-    video.videoId,
-    video.video_id,
-    video.youtubeId,
-    video.youtube_id
-
-  ];
-
-
-  for (const value of possibleIds) {
-
-    if (!value) {
-      continue;
-    }
-
-
-    const id = String(value).trim();
-
-
-    if (/^[A-Za-z0-9_-]{6,}$/.test(id)) {
-
-      return id;
-
-    }
-
-  }
-
-
-  const possibleUrls = [
-
-    video.url,
-    video.videoUrl,
-    video.youtubeUrl,
-    video.link
-
-  ];
-
-
-  for (const value of possibleUrls) {
-
-    if (!value) {
-      continue;
-    }
-
-
-    const url = String(value).trim();
-
-
-    const match = url.match(
-      /(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/
-    );
-
-
-    if (match && match[1]) {
-
-      return match[1];
-
-    }
-
-  }
-
-
-  return "";
-}
-
-
-/* =========================================
-   REMOVE OLD VIDEO SEO
-========================================= */
-
-function removeVideoSEO() {
-
-  document
-    .querySelectorAll(
-      'script[data-video-seo="true"]'
+    date = normalize_date(
+        entry.get("upload_date")
     )
-    .forEach(
-      (element) => element.remove()
-    );
 
-}
+    if date:
+        return date
 
 
-/* =========================================
-   VIDEO SEO
-========================================= */
+    # =====================================
+    # TIMESTAMP
+    # =====================================
 
-function addVideoSEO(videos) {
+    date = timestamp_to_date(
+        entry.get("timestamp")
+    )
 
-  removeVideoSEO();
-
-
-  if (
-    !Array.isArray(videos) ||
-    !videos.length
-  ) {
-
-    return;
-
-  }
+    if date:
+        return date
 
 
-  /*
-    Google does not need hundreds of duplicate
-    VideoObject scripts on one page.
+    # =====================================
+    # RELEASE DATE
+    # =====================================
 
-    Use latest 20 valid videos with dates.
-  */
+    date = normalize_date(
+        entry.get("release_date")
+    )
 
-  const validVideos = videos
-    .filter((video) => {
-
-      if (!video || typeof video !== "object") {
-        return false;
-      }
+    if date:
+        return date
 
 
-      const id = getVideoId(video);
+    # =====================================
+    # RELEASE TIMESTAMP
+    # =====================================
 
-      const date = getVideoDate(video);
+    date = timestamp_to_date(
+        entry.get("release_timestamp")
+    )
 
-
-      return Boolean(id && date);
-
-    })
-    .slice(0, 20);
-
-
-  const seen = new Set();
+    if date:
+        return date
 
 
-  validVideos.forEach((video) => {
-
-    const id = getVideoId(video);
+    return ""
 
 
-    if (!id || seen.has(id)) {
-      return;
+# =========================================
+# FETCH YOUTUBE TAB
+# =========================================
+
+def fetch_channel_tab(tab):
+
+    channel_url = (
+        f"https://www.youtube.com/"
+        f"{CHANNEL_HANDLE}/{tab}"
+    )
+
+    command = [
+
+        sys.executable,
+
+        "-m",
+        "yt_dlp",
+
+        "--flat-playlist",
+
+        "--extractor-args",
+        "youtubetab:approximate_date",
+
+        "--dump-single-json",
+
+        "--skip-download",
+
+        "--no-warnings",
+
+        "--ignore-errors",
+
+        channel_url
+    ]
+
+
+    print("")
+    print("-----------------------------------")
+    print(f"Fetching YouTube {tab}...")
+    print(f"URL: {channel_url}")
+    print("-----------------------------------")
+
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True
+    )
+
+
+    if result.returncode != 0:
+
+        print(
+            f"WARNING: Could not fetch {tab}."
+        )
+
+        if result.stderr:
+
+            print(
+                result.stderr[:2000]
+            )
+
+        return []
+
+
+    try:
+
+        data = json.loads(
+            result.stdout
+        )
+
+    except json.JSONDecodeError:
+
+        print(
+            f"WARNING: Could not parse "
+            f"YouTube {tab} response."
+        )
+
+        return []
+
+
+    entries = (
+        data.get("entries", [])
+        or []
+    )
+
+
+    print(
+        f"{tab}: {len(entries)} entries found."
+    )
+
+
+    return entries
+
+
+# =========================================
+# ENTRY → VIDEO OBJECT
+# =========================================
+
+def entry_to_video(
+    entry,
+    video_type
+):
+
+    if not entry:
+        return None
+
+
+    video_id = str(
+        entry.get("id", "")
+    ).strip()
+
+
+    if not video_id:
+        return None
+
+
+    title = str(
+        entry.get("title")
+        or "YouTube Video"
+    ).strip()
+
+
+    published = get_entry_date(
+        entry
+    )
+
+
+    video = {
+
+        "id":
+            video_id,
+
+        "title":
+            title,
+
+        "url":
+            f"https://www.youtube.com/"
+            f"watch?v={video_id}",
+
+        "thumbnail":
+            f"https://i.ytimg.com/"
+            f"vi/{video_id}/hqdefault.jpg",
+
+        "published":
+            published,
+
+        "publishedAt":
+            published,
+
+        "uploadDate":
+            published,
+
+        "type":
+            video_type
     }
 
 
-    seen.add(id);
+    return video
 
 
-    const title = String(
-      video.title ||
-      "Lokesh Information Video"
-    ).trim();
+# =========================================
+# GET ALL YOUTUBE CONTENT
+# =========================================
 
+def get_all_videos():
 
-    const description = String(
-      video.description ||
-      `${title}. Lokesh Information पर Tech News, Smartphones, Gadgets, Apps, AI Tools और Technology की जानकारी आसान Hindi और Hinglish में।`
-    ).trim();
-
-
-    const uploadDate = getVideoDate(video);
-
-
-    /*
-      Safety check:
-      Never create VideoObject without uploadDate.
-    */
-
-    if (!uploadDate) {
-      return;
-    }
-
-
-    const thumbnail =
-      video.thumbnail ||
-      `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
-
-
-    const videoUrl =
-      `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
-
-
-    const embedUrl =
-      `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
-
-
-    const schema = {
-
-      "@context":
-        "https://schema.org",
-
-      "@type":
-        "VideoObject",
-
-      "name":
-        title,
-
-      "description":
-        description,
-
-      "thumbnailUrl": [
-        thumbnail
-      ],
-
-      "uploadDate":
-        uploadDate,
-
-      "embedUrl":
-        embedUrl,
-
-      "url":
-        videoUrl,
-
-      "publisher": {
-
-        "@type":
-          "Organization",
-
-        "name":
-          "Lokesh Information",
-
-        "logo": {
-
-          "@type":
-            "ImageObject",
-
-          "url":
-            "https://raksha60601-png.github.io/lokesh-information-website/assets/lokesh-information-dp.png"
-
-        }
-
-      }
-
-    };
-
-
-    /*
-      Add duration only if available.
-    */
-
-    if (video.duration) {
-
-      schema.duration =
-        String(video.duration).trim();
-
-    }
-
-
-    /*
-      Live video information.
-    */
-
-    if (
-      video.type === "live"
-    ) {
-
-      schema.publication = {
-
-        "@type":
-          "BroadcastEvent",
-
-        "isLiveBroadcast":
-          false,
-
-        "startDate":
-          uploadDate
-
-      };
-
-    }
-
-
-    const script =
-      document.createElement("script");
-
-
-    script.type =
-      "application/ld+json";
-
-
-    script.dataset.videoSeo =
-      "true";
-
-
-    script.textContent =
-      JSON.stringify(schema);
-
-
-    document.head.appendChild(script);
-
-  });
-
-
-  console.log(
-    "VideoObject SEO created:",
-    seen.size
-  );
-
-}
-
-
-/* =========================================
-   CREATE VIDEO CARD
-========================================= */
-
-function videoCard(video) {
-
-  const id =
-    String(video.id || "").trim();
-
-
-  if (!id) {
-    return "";
-  }
-
-
-  const title =
-    escapeHTML(
-      video.title ||
-      "Lokesh Information Video"
-    );
-
-
-  const description =
-    escapeHTML(
-      video.description ||
-      ""
-    );
-
-
-  const type =
-    video.type ||
-    "video";
-
-
-  const typeClass =
-    type === "short"
-      ? "short-card"
-      : type === "live"
-      ? "live-card"
-      : "video-card";
-
-
-  const thumbnail =
-    video.thumbnail ||
-    `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
-
-
-  const publishedAt =
-    getVideoDate(video);
-
-
-  const embedUrl =
-    `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
-
-
-  /*
-    IMPORTANT:
-
-    Only add VideoObject microdata when
-    a valid uploadDate exists.
-
-    This prevents Google's
-    "Missing field uploadDate" error.
-  */
-
-  const schemaAttributes =
-    publishedAt
-      ? `
-        itemscope
-        itemtype="https://schema.org/VideoObject"
-      `
-      : "";
-
-
-  const nameMeta =
-    publishedAt
-      ? `
-        <meta
-          itemprop="name"
-          content="${title}"
-        >
-      `
-      : "";
-
-
-  const descriptionMeta =
-    publishedAt && description
-      ? `
-        <meta
-          itemprop="description"
-          content="${description}"
-        >
-      `
-      : "";
-
-
-  const thumbnailMeta =
-    publishedAt
-      ? `
-        <meta
-          itemprop="thumbnailUrl"
-          content="${escapeHTML(thumbnail)}"
-        >
-      `
-      : "";
-
-
-  const dateMeta =
-    publishedAt
-      ? `
-        <meta
-          itemprop="uploadDate"
-          content="${escapeHTML(publishedAt)}"
-        >
-      `
-      : "";
-
-
-  const embedMeta =
-    publishedAt
-      ? `
-        <meta
-          itemprop="embedUrl"
-          content="${embedUrl}"
-        >
-      `
-      : "";
-
-
-  const urlMeta =
-    publishedAt
-      ? `
-        <meta
-          itemprop="url"
-          content="https://www.youtube.com/watch?v=${encodeURIComponent(id)}"
-        >
-      `
-      : "";
-
-
-  return `
-
-    <article
-      class="youtube-card ${typeClass}"
-      ${schemaAttributes}
-    >
-
-      ${nameMeta}
-
-      ${descriptionMeta}
-
-      ${thumbnailMeta}
-
-      ${dateMeta}
-
-      ${embedMeta}
-
-      ${urlMeta}
-
-
-      <div class="youtube-frame">
-
-        <iframe
-          src="${embedUrl}?rel=0"
-          title="${title}"
-          loading="lazy"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowfullscreen>
-        </iframe>
-
-      </div>
-
-
-      <div
-        class="youtube-card-title"
-        ${publishedAt ? 'itemprop="name"' : ""}
-      >
-        ${title}
-      </div>
-
-    </article>
-
-  `;
-
-}
-
-
-/* =========================================
-   RENDER GRID
-========================================= */
-
-function renderGrid(
-  element,
-  videos,
-  limit = 6
-) {
-
-  if (!element) {
-    return;
-  }
-
-
-  const visibleVideos =
-    limit === Infinity
-      ? videos
-      : videos.slice(0, limit);
-
-
-  if (!visibleVideos.length) {
-
-    element.innerHTML = `
-      <div class="loading">
-        अभी कोई video उपलब्ध नहीं है।
-      </div>
-    `;
-
-    return;
-
-  }
-
-
-  element.innerHTML =
-    visibleVideos
-      .map(videoCard)
-      .join("");
-
-}
-
-
-/* =========================================
-   UPDATE COUNT
-========================================= */
-
-function updateCount(
-  elementId,
-  count,
-  text
-) {
-
-  const element =
-    document.getElementById(elementId);
-
-
-  if (!element) {
-    return;
-  }
-
-
-  element.textContent =
-    `${count} ${text}`;
-
-}
-
-
-/* =========================================
-   MAIN YOUTUBE LOADER
-========================================= */
-
-async function loadYouTube() {
-
-  const videosGrid =
-    document.getElementById("videosGrid");
-
-  const liveGrid =
-    document.getElementById("liveGrid");
-
-  const shortsGrid =
-    document.getElementById("shortsGrid");
-
-
-  if (
-    !videosGrid ||
-    !liveGrid ||
-    !shortsGrid
-  ) {
-
-    console.warn(
-      "YouTube grids not found."
-    );
-
-    return;
-
-  }
-
-
-  try {
-
-    /*
-      Only videos.json is required.
-    */
-
-    const response =
-      await fetch(
-        `videos.json?ts=${Date.now()}`,
-        {
-          cache: "no-store"
-        }
-      );
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        `videos.json returned ${response.status}`
-      );
-
-    }
-
-
-    const data =
-      await response.json();
-
-
-    const allVideos =
-      Array.isArray(data.videos)
-        ? data.videos
-        : [];
-
-
-    /* =====================================
-       REMOVE DUPLICATES
-    ===================================== */
-
-    const uniqueVideos = [];
-
-    const seen = new Set();
-
-
-    allVideos.forEach((video) => {
-
-      if (
-        !video ||
-        typeof video !== "object"
-      ) {
-
-        return;
-
-      }
-
-
-      const id =
-        getVideoId(video);
-
-
-      if (
-        !id ||
-        seen.has(id)
-      ) {
-
-        return;
-
-      }
-
-
-      seen.add(id);
-
-
-      uniqueVideos.push({
-
-        ...video,
-
-        id
-
-      });
-
-    });
-
-
-    /* =====================================
-       SEPARATE CONTENT
-    ===================================== */
-
-    const normalVideos =
-      uniqueVideos.filter(
-        video =>
-          video.type === "video" ||
-          !video.type
-      );
-
-
-    const liveVideos =
-      uniqueVideos.filter(
-        video =>
-          video.type === "live"
-      );
-
-
-    const shorts =
-      uniqueVideos.filter(
-        video =>
-          video.type === "short"
-      );
-
-
-    /* =====================================
-       SHOW LATEST 6
-    ===================================== */
-
-    renderGrid(
-      videosGrid,
-      normalVideos,
-      6
-    );
-
-
-    renderGrid(
-      liveGrid,
-      liveVideos,
-      6
-    );
-
-
-    renderGrid(
-      shortsGrid,
-      shorts,
-      6
-    );
-
-
-    /* =====================================
-       COUNTS
-    ===================================== */
-
-    updateCount(
-      "videoCount",
-      normalVideos.length,
-      "Videos"
-    );
-
-
-    updateCount(
-      "liveCount",
-      liveVideos.length,
-      "Live streams"
-    );
-
-
-    updateCount(
-      "shortCount",
-      shorts.length,
-      "Shorts"
-    );
-
-
-    /* =====================================
-       VIDEO SEO
-    ===================================== */
-
-    addVideoSEO(uniqueVideos);
-
-
-    /* =====================================
-       VIEW ALL
-    ===================================== */
-
-    setupViewAll(
-      "videos",
-      "VIDEOS",
-      "All Videos",
-      normalVideos
-    );
-
-
-    setupViewAll(
-      "live",
-      "LIVE",
-      "All Live Streams",
-      liveVideos
-    );
-
-
-    setupViewAll(
-      "shorts",
-      "SHORTS",
-      "All Shorts",
-      shorts
-    );
-
-
-    /* =====================================
-       CONSOLE INFORMATION
-    ===================================== */
-
-    console.log(
-      "YouTube sync successful"
-    );
-
-
-    console.log(
-      "Total content:",
-      uniqueVideos.length
-    );
-
-
-    console.log(
-      "Videos:",
-      normalVideos.length
-    );
-
-
-    console.log(
-      "Live:",
-      liveVideos.length
-    );
-
-
-    console.log(
-      "Shorts:",
-      shorts.length
-    );
-
-
-    console.log(
-      "Videos with uploadDate:",
-      uniqueVideos.filter(
-        video => getVideoDate(video)
-      ).length
-    );
-
-
-    console.log(
-      "Video SEO:",
-      "Enabled"
-    );
-
-
-  }
-  catch (error) {
-
-    console.error(
-      "Could not load YouTube videos:",
-      error
-    );
-
-
-    videosGrid.innerHTML = `
-      <div class="loading">
-        Videos अभी load नहीं हो सकीं।
-      </div>
-    `;
-
-
-    liveGrid.innerHTML = `
-      <div class="loading">
-        Live videos अभी load नहीं हो सकीं।
-      </div>
-    `;
-
-
-    shortsGrid.innerHTML = `
-      <div class="loading">
-        Shorts अभी load नहीं हो सके।
-      </div>
-    `;
-
-  }
-
-}
-
-
-/* =========================================
-   VIEW ALL
-========================================= */
-
-function setupViewAll(
-  section,
-  label,
-  title,
-  videos
-) {
-
-  const button =
-    document.querySelector(
-      `.view-all-btn[data-section="${section}"]`
-    );
-
-
-  if (!button) {
-    return;
-  }
-
-
-  button.onclick = () => {
-
-    const fullView =
-      document.getElementById(
-        "youtubeFullView"
-      );
-
-
-    const fullViewGrid =
-      document.getElementById(
-        "fullViewGrid"
-      );
-
-
-    const fullViewLabel =
-      document.getElementById(
-        "fullViewLabel"
-      );
-
-
-    const fullViewTitle =
-      document.getElementById(
-        "fullViewTitle"
-      );
-
-
-    if (
-      !fullView ||
-      !fullViewGrid ||
-      !fullViewLabel ||
-      !fullViewTitle
-    ) {
-
-      return;
-
-    }
-
-
-    fullViewLabel.textContent =
-      label;
-
-
-    fullViewTitle.textContent =
-      title;
-
-
-    fullViewGrid.innerHTML =
-      videos.length
-
-        ? videos
-            .map(videoCard)
-            .join("")
-
-        : `
-          <div class="loading">
-            इस category में अभी कोई content नहीं है।
-          </div>
-        `;
-
-
-    fullView.hidden =
-      false;
-
-
-    document
-      .querySelectorAll(
-        ".youtube-category"
-      )
-      .forEach(
-        sectionElement => {
-
-          sectionElement.style.display =
-            "none";
-
-        }
-      );
-
-
-    fullView.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
-
-  };
-
-}
-
-
-/* =========================================
-   BACK BUTTON
-========================================= */
-
-const backButton =
-  document.getElementById(
-    "backToYoutubeSections"
-  );
-
-
-backButton?.addEventListener(
-  "click",
-  () => {
-
-    const fullView =
-      document.getElementById(
-        "youtubeFullView"
-      );
-
-
-    if (fullView) {
-
-      fullView.hidden =
-        true;
-
-    }
-
-
-    document
-      .querySelectorAll(
-        ".youtube-category"
-      )
-      .forEach(
-        sectionElement => {
-
-          sectionElement.style.display =
-            "";
-
-        }
-      );
-
-
-    document
-      .getElementById(
+    normal_entries = fetch_channel_tab(
         "videos"
-      )
-      ?.scrollIntoView({
-        behavior: "smooth"
-      });
+    )
 
-  }
-);
+    short_entries = fetch_channel_tab(
+        "shorts"
+    )
 
-
-/* =========================================
-   FIRST LOAD
-========================================= */
-
-loadYouTube();
+    live_entries = fetch_channel_tab(
+        "streams"
+    )
 
 
-/* =========================================
-   AUTO REFRESH
-   Every 5 Minutes
-========================================= */
+    # =====================================
+    # IDs
+    # =====================================
 
-setInterval(
-  loadYouTube,
-  5 * 60 * 1000
-);
+    short_ids = {
+
+        entry.get("id")
+
+        for entry in short_entries
+
+        if entry
+        and entry.get("id")
+    }
+
+
+    live_ids = {
+
+        entry.get("id")
+
+        for entry in live_entries
+
+        if entry
+        and entry.get("id")
+    }
+
+
+    videos = []
+
+    seen = set()
+
+
+    # =====================================
+    # NORMAL VIDEOS
+    # =====================================
+
+    for entry in normal_entries:
+
+        if not entry:
+            continue
+
+
+        video_id = entry.get("id")
+
+
+        if not video_id:
+            continue
+
+
+        if video_id in short_ids:
+            continue
+
+
+        if video_id in live_ids:
+            continue
+
+
+        if video_id in seen:
+            continue
+
+
+        video = entry_to_video(
+            entry,
+            "video"
+        )
+
+
+        if video:
+
+            videos.append(video)
+
+            seen.add(video_id)
+
+
+    # =====================================
+    # SHORTS
+    # =====================================
+
+    for entry in short_entries:
+
+        if not entry:
+            continue
+
+
+        video_id = entry.get("id")
+
+
+        if not video_id:
+            continue
+
+
+        if video_id in live_ids:
+            continue
+
+
+        if video_id in seen:
+            continue
+
+
+        video = entry_to_video(
+            entry,
+            "short"
+        )
+
+
+        if video:
+
+            videos.append(video)
+
+            seen.add(video_id)
+
+
+    # =====================================
+    # LIVE
+    # =====================================
+
+    for entry in live_entries:
+
+        if not entry:
+            continue
+
+
+        video_id = entry.get("id")
+
+
+        if not video_id:
+            continue
+
+
+        if video_id in seen:
+            continue
+
+
+        video = entry_to_video(
+            entry,
+            "live"
+        )
+
+
+        if video:
+
+            videos.append(video)
+
+            seen.add(video_id)
+
+
+    # =====================================
+    # VALIDATE RESULT
+    # =====================================
+
+    if not videos:
+
+        raise RuntimeError(
+            "No YouTube content found. "
+            "Existing videos.json was not replaced."
+        )
+
+
+    print("")
+    print("===================================")
+
+    print(
+        f"Total content found: {len(videos)}"
+    )
+
+    print(
+        "Normal videos: "
+        f"{sum(1 for v in videos if v['type'] == 'video')}"
+    )
+
+    print(
+        "Shorts: "
+        f"{sum(1 for v in videos if v['type'] == 'short')}"
+    )
+
+    print(
+        "Live streams: "
+        f"{sum(1 for v in videos if v['type'] == 'live')}"
+    )
+
+    print(
+        "Items with date: "
+        f"{sum(1 for v in videos if v.get('uploadDate'))}"
+    )
+
+    print("===================================")
+
+
+    return videos
+
+
+# =========================================
+# LOAD EXISTING VIDEOS
+# =========================================
+
+def load_existing_videos():
+
+    if not VIDEOS_FILE.exists():
+
+        print(
+            "videos.json does not exist yet."
+        )
+
+        return []
+
+
+    try:
+
+        with open(
+            VIDEOS_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            data = json.load(file)
+
+
+        videos = data.get(
+            "videos",
+            []
+        )
+
+
+        if isinstance(
+            videos,
+            list
+        ):
+
+            return videos
+
+
+    except Exception as error:
+
+        print(
+            "Could not read existing "
+            f"videos.json: {error}"
+        )
+
+
+    return []
+
+
+# =========================================
+# MERGE OLD + NEW
+# =========================================
+
+def merge_videos(
+    new_videos,
+    old_videos
+):
+
+    old_by_id = {}
+
+
+    # =====================================
+    # INDEX OLD VIDEOS
+    # =====================================
+
+    for old_video in old_videos:
+
+        if not isinstance(
+            old_video,
+            dict
+        ):
+            continue
+
+
+        video_id = str(
+            old_video.get("id", "")
+        ).strip()
+
+
+        if video_id:
+
+            old_by_id[video_id] = old_video
+
+
+    merged = []
+
+    seen = set()
+
+
+    # =====================================
+    # NEW DATA FIRST
+    # =====================================
+
+    for new_video in new_videos:
+
+        if not isinstance(
+            new_video,
+            dict
+        ):
+            continue
+
+
+        video_id = str(
+            new_video.get("id", "")
+        ).strip()
+
+
+        if not video_id:
+            continue
+
+
+        if video_id in seen:
+            continue
+
+
+        old_video = old_by_id.get(
+            video_id
+        )
+
+
+        video = dict(
+            new_video
+        )
+
+
+        # =================================
+        # DATE
+        # =================================
+
+        new_date = (
+
+            video.get("uploadDate")
+            or video.get("publishedAt")
+            or video.get("published")
+            or ""
+        )
+
+
+        old_date = ""
+
+
+        if old_video:
+
+            old_date = (
+
+                old_video.get("uploadDate")
+                or old_video.get("publishedAt")
+                or old_video.get("published")
+                or ""
+            )
+
+
+        final_date = (
+
+            normalize_date(new_date)
+            or normalize_date(old_date)
+            or ""
+        )
+
+
+        video["published"] = final_date
+
+        video["publishedAt"] = final_date
+
+        video["uploadDate"] = final_date
+
+
+        # =================================
+        # KEEP OLD DESCRIPTION
+        # =================================
+
+        if (
+
+            not video.get("description")
+
+            and old_video
+
+            and old_video.get("description")
+        ):
+
+            video["description"] = (
+                old_video["description"]
+            )
+
+
+        # =================================
+        # KEEP OLD THUMBNAIL
+        # =================================
+
+        if (
+
+            not video.get("thumbnail")
+
+            and old_video
+
+            and old_video.get("thumbnail")
+        ):
+
+            video["thumbnail"] = (
+                old_video["thumbnail"]
+            )
+
+
+        # =================================
+        # TYPE
+        # =================================
+
+        if video.get("type") not in [
+
+            "video",
+            "short",
+            "live"
+        ]:
+
+            if (
+
+                old_video
+
+                and old_video.get("type")
+                in [
+                    "video",
+                    "short",
+                    "live"
+                ]
+            ):
+
+                video["type"] = (
+                    old_video["type"]
+                )
+
+            else:
+
+                video["type"] = "video"
+
+
+        merged.append(
+            video
+        )
+
+        seen.add(
+            video_id
+        )
+
+
+    # =====================================
+    # KEEP OLD CONTENT NOT FOUND NOW
+    # =====================================
+
+    for old_video in old_videos:
+
+        if not isinstance(
+            old_video,
+            dict
+        ):
+            continue
+
+
+        video_id = str(
+            old_video.get("id", "")
+        ).strip()
+
+
+        if not video_id:
+            continue
+
+
+        if video_id in seen:
+            continue
+
+
+        video = dict(
+            old_video
+        )
+
+
+        # =================================
+        # DATE
+        # =================================
+
+        final_date = (
+
+            normalize_date(
+                video.get("uploadDate")
+            )
+
+            or normalize_date(
+                video.get("publishedAt")
+            )
+
+            or normalize_date(
+                video.get("published")
+            )
+
+            or ""
+        )
+
+
+        video["published"] = final_date
+
+        video["publishedAt"] = final_date
+
+        video["uploadDate"] = final_date
+
+
+        # =================================
+        # TYPE
+        # =================================
+
+        if video.get("type") not in [
+
+            "video",
+            "short",
+            "live"
+        ]:
+
+            video["type"] = "video"
+
+
+        merged.append(
+            video
+        )
+
+        seen.add(
+            video_id
+        )
+
+
+    return merged
+
+
+# =========================================
+# SORT VIDEOS
+# =========================================
+
+def sort_videos(videos):
+
+    return sorted(
+
+        videos,
+
+        key=lambda video:
+            video.get("uploadDate", ""),
+
+        reverse=True
+    )
+
+
+# =========================================
+# VALIDATE VIDEOS
+# =========================================
+
+def validate_videos(videos):
+
+    required_fields = [
+
+        "id",
+        "title",
+        "url",
+        "thumbnail"
+    ]
+
+
+    valid_videos = []
+
+
+    for video in videos:
+
+        if not isinstance(
+            video,
+            dict
+        ):
+            continue
+
+
+        if not all(
+            video.get(field)
+            for field in required_fields
+        ):
+
+            continue
+
+
+        # =================================
+        # DATE
+        # =================================
+
+        published = (
+
+            video.get("uploadDate")
+            or video.get("publishedAt")
+            or video.get("published")
+            or ""
+        )
+
+
+        final_date = normalize_date(
+            published
+        )
+
+
+        video["published"] = (
+            final_date
+        )
+
+        video["publishedAt"] = (
+            final_date
+        )
+
+        video["uploadDate"] = (
+            final_date
+        )
+
+
+        # =================================
+        # TYPE
+        # =================================
+
+        if video.get("type") not in [
+
+            "video",
+            "short",
+            "live"
+        ]:
+
+            video["type"] = "video"
+
+
+        valid_videos.append(
+            video
+        )
+
+
+    print("")
+    print(
+        "Validation: "
+        f"{len(valid_videos)} valid items "
+        f"out of {len(videos)}"
+    )
+
+
+    print(
+        "Items with uploadDate: "
+        f"{sum(1 for v in valid_videos if v.get('uploadDate'))}"
+    )
+
+
+    return valid_videos
+
+
+# =========================================
+# SAVE VIDEOS.JSON
+# =========================================
+
+def save_videos(videos):
+
+    data = {
+
+        "videos":
+            videos
+    }
+
+
+    temporary_file = (
+        VIDEOS_FILE.with_suffix(
+            ".json.tmp"
+        )
+    )
+
+
+    with open(
+        temporary_file,
+        "w",
+        encoding="utf-8"
+    ) as file:
+
+        json.dump(
+
+            data,
+
+            file,
+
+            ensure_ascii=False,
+
+            indent=2
+        )
+
+
+    temporary_file.replace(
+        VIDEOS_FILE
+    )
+
+
+    print("")
+    print(
+        f"Saved {len(videos)} "
+        "content items to videos.json"
+    )
+
+
+# =========================================
+# SAVE CHANNEL.JSON
+# =========================================
+
+def save_channel(channel_id):
+
+    uploads_playlist_id = ""
+
+
+    if channel_id.startswith("UC"):
+
+        uploads_playlist_id = (
+            "UU"
+            + channel_id[2:]
+        )
+
+
+    data = {
+
+        "channelId":
+            channel_id,
+
+        "uploadsPlaylistId":
+            uploads_playlist_id,
+
+        "channelUrl":
+            "https://www.youtube.com/channel/"
+            + channel_id,
+
+        "handle":
+            CHANNEL_HANDLE
+    }
+
+
+    with open(
+        CHANNEL_FILE,
+        "w",
+        encoding="utf-8"
+    ) as file:
+
+        json.dump(
+
+            data,
+
+            file,
+
+            ensure_ascii=False,
+
+            indent=2
+        )
+
+
+    print(
+        "Saved channel.json"
+    )
+
+
+# =========================================
+# MAIN
+# =========================================
+
+def main():
+
+    print("")
+    print("===================================")
+    print("LOKESH INFORMATION")
+    print("YouTube automatic sync starting...")
+    print("===================================")
+
+
+    # =====================================
+    # INSTALL YT-DLP
+    # =====================================
+
+    install_yt_dlp()
+
+
+    # =====================================
+    # LOAD OLD DATA
+    # =====================================
+
+    old_videos = (
+        load_existing_videos()
+    )
+
+
+    print(
+        f"Existing videos: "
+        f"{len(old_videos)}"
+    )
+
+
+    # =====================================
+    # FETCH NEW DATA
+    # =====================================
+
+    new_videos = (
+        get_all_videos()
+    )
+
+
+    # =====================================
+    # MERGE
+    # =====================================
+
+    videos = merge_videos(
+
+        new_videos,
+
+        old_videos
+    )
+
+
+    print(
+        f"After merge: "
+        f"{len(videos)} content items"
+    )
+
+
+    # =====================================
+    # SORT NEWEST FIRST
+    # =====================================
+
+    videos = sort_videos(
+        videos
+    )
+
+
+    # =====================================
+    # VALIDATE
+    # =====================================
+
+    videos = validate_videos(
+        videos
+    )
+
+
+    if not videos:
+
+        raise RuntimeError(
+            "No valid YouTube content found. "
+            "Existing website data was not replaced."
+        )
+
+
+    # =====================================
+    # SAVE
+    # =====================================
+
+    save_videos(
+        videos
+    )
+
+
+    save_channel(
+        CHANNEL_ID
+    )
+
+
+    # =====================================
+    # FINAL REPORT
+    # =====================================
+
+    print("")
+    print("===================================")
+    print("YouTube sync completed successfully.")
+    print("===================================")
+
+
+    print(
+        f"Total content: {len(videos)}"
+    )
+
+
+    print(
+        "Videos: "
+        f"{sum(1 for v in videos if v['type'] == 'video')}"
+    )
+
+
+    print(
+        "Shorts: "
+        f"{sum(1 for v in videos if v['type'] == 'short')}"
+    )
+
+
+    print(
+        "Live: "
+        f"{sum(1 for v in videos if v['type'] == 'live')}"
+    )
+
+
+    print(
+        "With uploadDate: "
+        f"{sum(1 for v in videos if v.get('uploadDate'))}"
+    )
+
+
+    print("===================================")
+
+
+# =========================================
+# RUN
+# =========================================
+
+if __name__ == "__main__":
+
+    main()
