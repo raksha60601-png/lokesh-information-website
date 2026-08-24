@@ -1,11 +1,16 @@
 /* =========================================
    LOKESH INFORMATION
    YouTube Videos / Shorts / Live
-   Dynamic Video SEO + Auto Refresh
+
+   DATA SOURCE:
+   videos.json
+
+   VIDEO SEO:
+   JSON-LD VideoObject
 
    IMPORTANT:
-   - videos.json = YouTube video data
-   - videoobjects.json = SEO dates / VideoObject data
+   VideoObject is generated ONLY as JSON-LD.
+   HTML microdata is NOT used.
 ========================================= */
 
 
@@ -51,46 +56,38 @@ function normalizeUploadDate(value) {
     return null;
   }
 
-  const dateString =
-    String(value).trim();
+  const dateString = String(value).trim();
 
   if (!dateString) {
     return null;
   }
 
-  /*
-    Accept:
-    2026-08-20
-    2026-08-20T10:30:00+05:30
-    2026-08-20T10:30:00Z
-  */
 
-  if (
-    /^\d{4}-\d{2}-\d{2}$/.test(dateString)
-  ) {
-    return `${dateString}T00:00:00+05:30`;
+  /* YYYY-MM-DD */
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return `${dateString}T00:00:00Z`;
   }
 
 
-  if (
-    /^\d{4}-\d{2}-\d{2}T/.test(dateString)
-  ) {
-    return dateString;
+  /* ISO DATE */
+
+  if (/^\d{4}-\d{2}-\d{2}T/.test(dateString)) {
+
+    const parsed = new Date(dateString);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
   }
 
 
-  const parsed =
-    new Date(dateString);
+  /* Other valid date */
 
+  const parsed = new Date(dateString);
 
-  if (
-    !Number.isNaN(
-      parsed.getTime()
-    )
-  ) {
-
+  if (!Number.isNaN(parsed.getTime())) {
     return parsed.toISOString();
-
   }
 
 
@@ -99,7 +96,50 @@ function normalizeUploadDate(value) {
 
 
 /* =========================================
-   GET VIDEO ID FROM ANY OBJECT
+   GET VIDEO DATE
+========================================= */
+
+function getVideoDate(video) {
+
+  if (!video || typeof video !== "object") {
+    return null;
+  }
+
+  const possibleDates = [
+
+    video.uploadDate,
+    video.upload_date,
+
+    video.publishedAt,
+    video.published_at,
+
+    video.published,
+
+    video.date,
+    video.datePublished,
+
+    video.createdAt,
+    video.created_at
+
+  ];
+
+
+  for (const value of possibleDates) {
+
+    const normalized = normalizeUploadDate(value);
+
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+
+  return null;
+}
+
+
+/* =========================================
+   GET VIDEO ID
 ========================================= */
 
 function getVideoId(video) {
@@ -110,12 +150,13 @@ function getVideoId(video) {
 
 
   const possibleIds = [
+
     video.id,
     video.videoId,
     video.video_id,
     video.youtubeId,
-    video.youtube_id,
-    video.name
+    video.youtube_id
+
   ];
 
 
@@ -125,34 +166,21 @@ function getVideoId(video) {
       continue;
     }
 
+    const id = String(value).trim();
 
-    const id =
-      String(value).trim();
-
-
-    /*
-      Normal YouTube ID
-      Usually 11 characters.
-    */
-
-    if (
-      /^[A-Za-z0-9_-]{6,}$/.test(id)
-    ) {
+    if (/^[A-Za-z0-9_-]{6,}$/.test(id)) {
       return id;
     }
-
   }
 
 
-  /*
-    Try extracting ID from YouTube URL
-  */
-
   const possibleUrls = [
+
     video.url,
     video.videoUrl,
     video.youtubeUrl,
     video.link
+
   ];
 
 
@@ -162,310 +190,106 @@ function getVideoId(video) {
       continue;
     }
 
+    const url = String(value).trim();
 
-    const url =
-      String(value).trim();
-
-
-    const match =
-      url.match(
-        /(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/
-      );
-
+    const match = url.match(
+      /(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/
+    );
 
     if (match && match[1]) {
       return match[1];
     }
-
   }
 
 
   return "";
-
 }
 
 
 /* =========================================
-   GET DATE FROM VIDEO OBJECT
+   REMOVE OLD VIDEO JSON-LD
 ========================================= */
 
-function getVideoDate(video) {
-
-  if (!video || typeof video !== "object") {
-    return null;
-  }
-
-
-  const possibleDates = [
-
-    video.uploadDate,
-
-    video.upload_date,
-
-    video.publishedAt,
-
-    video.published_at,
-
-    video.published,
-
-    video.date,
-
-    video.datePublished,
-
-    video.createdAt,
-
-    video.created_at
-
-  ];
-
-
-  for (const value of possibleDates) {
-
-    const normalized =
-      normalizeUploadDate(value);
-
-
-    if (normalized) {
-      return normalized;
-    }
-
-  }
-
-
-  return null;
-
-}
-
-
-/* =========================================
-   LOAD SEO DATES
-========================================= */
-
-async function loadVideoObjectData() {
-
-  try {
-
-    const response =
-      await fetch(
-        `videoobjects.json?ts=${Date.now()}`,
-        {
-          cache: "no-store"
-        }
-      );
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        `videoobjects.json returned ${response.status}`
-      );
-
-    }
-
-
-    const data =
-      await response.json();
-
-
-    /*
-      Support multiple possible structures:
-      
-      {
-        "videos": [...]
-      }
-
-      OR
-
-      {
-        "videoObjects": [...]
-      }
-
-      OR
-
-      [...]
-    */
-
-    let items = [];
-
-
-    if (Array.isArray(data)) {
-
-      items = data;
-
-    }
-    else if (
-      Array.isArray(data.videos)
-    ) {
-
-      items = data.videos;
-
-    }
-    else if (
-      Array.isArray(data.videoObjects)
-    ) {
-
-      items = data.videoObjects;
-
-    }
-    else if (
-      Array.isArray(data.videoobjects)
-    ) {
-
-      items = data.videoobjects;
-
-    }
-
-
-    const dateMap =
-      new Map();
-
-
-    items.forEach((item) => {
-
-      if (
-        !item ||
-        typeof item !== "object"
-      ) {
-        return;
-      }
-
-
-      const id =
-        getVideoId(item);
-
-
-      const date =
-        getVideoDate(item);
-
-
-      if (
-        id &&
-        date
-      ) {
-
-        dateMap.set(
-          id,
-          date
-        );
-
-      }
-
+function removeVideoSEO() {
+
+  document
+    .querySelectorAll('script[data-video-seo="true"]')
+    .forEach((element) => {
+      element.remove();
     });
 
-
-    console.log(
-      "VideoObject date records:",
-      dateMap.size
-    );
-
-
-    return dateMap;
-
-
-  }
-  catch (error) {
-
-    console.warn(
-      "videoobjects.json could not be loaded:",
-      error
-    );
-
-
-    return new Map();
-
-  }
-
 }
 
 
 /* =========================================
-   VIDEO SEO
+   CREATE VIDEO SEO
 ========================================= */
 
 function addVideoSEO(videos) {
 
-  /*
-    Remove old dynamically generated
-    VideoObject scripts.
-  */
-
-  document
-    .querySelectorAll(
-      'script[data-video-seo="true"]'
-    )
-    .forEach(
-      (element) => element.remove()
-    );
+  removeVideoSEO();
 
 
-  if (
-    !Array.isArray(videos) ||
-    !videos.length
-  ) {
+  if (!Array.isArray(videos) || !videos.length) {
+
+    console.log("No videos available for VideoObject SEO.");
 
     return;
-
   }
 
 
-  /*
-    Google SEO data for latest 20 videos
-  */
+  const seen = new Set();
 
-  const validVideos =
-    videos
-      .filter(
-        video =>
-          video &&
-          video.id
-      )
-      .slice(0, 20);
+  let seoCount = 0;
 
 
-  const seen =
-    new Set();
+  videos.forEach((video) => {
 
-
-  validVideos.forEach((video) => {
-
-    const id =
-      String(video.id).trim();
-
-
-    if (
-      !id ||
-      seen.has(id)
-    ) {
-
+    if (!video || typeof video !== "object") {
       return;
-
     }
 
+
+    const id = getVideoId(video);
+
+    const uploadDate = getVideoDate(video);
+
+
+    /* -----------------------------------------
+       VideoObject requires ID + uploadDate
+    ----------------------------------------- */
+
+    if (!id || !uploadDate) {
+      return;
+    }
+
+
+    /* -----------------------------------------
+       Prevent duplicate VideoObjects
+    ----------------------------------------- */
+
+    if (seen.has(id)) {
+      return;
+    }
 
     seen.add(id);
 
 
-    const title =
-      String(
-        video.title ||
-        "Lokesh Information Video"
-      ).trim();
+    const title = String(
+      video.title ||
+      "Lokesh Information Video"
+    ).trim();
 
 
-    const description =
-      String(
-        video.description ||
-        `${title}. Lokesh Information पर Tech News, Smartphones, Gadgets, Apps, AI Tools और Technology की जानकारी आसान Hindi और Hinglish में।`
-      ).trim();
+    const description = String(
+      video.description ||
+      `${title}. Lokesh Information पर Tech News, Smartphones, Gadgets, Apps, AI Tools और Technology की जानकारी आसान Hindi और Hinglish में।`
+    ).trim();
 
 
     const thumbnail =
       video.thumbnail ||
       `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
-
-
-    const uploadDate =
-      getVideoDate(video);
 
 
     const videoUrl =
@@ -476,13 +300,18 @@ function addVideoSEO(videos) {
       `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
 
 
+    /* -----------------------------------------
+       VIDEO OBJECT
+    ----------------------------------------- */
+
     const schema = {
 
-      "@context":
-        "https://schema.org",
+      "@context": "https://schema.org",
 
-      "@type":
-        "VideoObject",
+      "@type": "VideoObject",
+
+      "@id":
+        `${window.location.origin}${window.location.pathname}#video-${id}`,
 
       "name":
         title,
@@ -494,109 +323,81 @@ function addVideoSEO(videos) {
         thumbnail
       ],
 
+      "uploadDate":
+        uploadDate,
+
       "embedUrl":
         embedUrl,
 
+      "url":
+        videoUrl,
+
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": window.location.href
+      },
+
       "publisher": {
 
-        "@type":
-          "Organization",
+        "@type": "Organization",
 
         "name":
           "Lokesh Information",
 
+        "url":
+          "https://raksha60601-png.github.io/lokesh-information-website/",
+
         "logo": {
 
-          "@type":
-            "ImageObject",
+          "@type": "ImageObject",
 
           "url":
             "https://raksha60601-png.github.io/lokesh-information-website/assets/lokesh-information-dp.png"
 
         }
 
-      },
-
-      "author": {
-
-        "@type":
-          "Person",
-
-        "name":
-          "Lokesh Information"
-
-      },
-
-      "url":
-        videoUrl
+      }
 
     };
 
 
-    /*
-      uploadDate is REQUIRED for Google VideoObject.
-    */
-
-    if (uploadDate) {
-
-      schema.uploadDate =
-        uploadDate;
-
-    }
-
-
-    /*
-      Optional duration.
-    */
+    /* -----------------------------------------
+       OPTIONAL DURATION
+    ----------------------------------------- */
 
     if (video.duration) {
 
       schema.duration =
-        String(
-          video.duration
-        ).trim();
+        String(video.duration).trim();
 
     }
 
 
-    /*
-      Live videos can additionally
-      contain BroadcastEvent data.
-    */
+    /* -----------------------------------------
+       LIVE VIDEO
+    ----------------------------------------- */
 
-    if (
-      video.type === "live"
-    ) {
+    if (video.type === "live") {
 
-      const startDate =
-        uploadDate ||
-        getVideoDate(video);
+      schema.publication = {
 
+        "@type": "BroadcastEvent",
 
-      if (startDate) {
+        "isLiveBroadcast": false,
 
-        schema.publication = {
+        "startDate": uploadDate
 
-          "@type":
-            "BroadcastEvent",
-
-          "isLiveBroadcast":
-            false,
-
-          "startDate":
-            startDate
-
-        };
-
-      }
+      };
 
     }
 
+
+    /* -----------------------------------------
+       CREATE JSON-LD SCRIPT
+    ----------------------------------------- */
 
     const script =
-      document.createElement(
-        "script"
-      );
+      document.createElement("script");
 
 
     script.type =
@@ -608,16 +409,21 @@ function addVideoSEO(videos) {
 
 
     script.textContent =
-      JSON.stringify(
-        schema
-      );
+      JSON.stringify(schema);
 
 
-    document.head.appendChild(
-      script
-    );
+    document.head.appendChild(script);
+
+
+    seoCount++;
 
   });
+
+
+  console.log(
+    "VideoObject JSON-LD created:",
+    seoCount
+  );
 
 }
 
@@ -629,9 +435,7 @@ function addVideoSEO(videos) {
 function videoCard(video) {
 
   const id =
-    String(
-      video.id || ""
-    ).trim();
+    getVideoId(video);
 
 
   if (!id) {
@@ -671,11 +475,6 @@ function videoCard(video) {
     `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
 
 
-  const publishedAt =
-    getVideoDate(video) ||
-    "";
-
-
   const embedUrl =
     `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
 
@@ -684,56 +483,7 @@ function videoCard(video) {
 
     <article
       class="youtube-card ${typeClass}"
-      itemscope
-      itemtype="https://schema.org/VideoObject"
     >
-
-      <meta
-        itemprop="name"
-        content="${title}"
-      >
-
-      ${
-        description
-          ? `
-            <meta
-              itemprop="description"
-              content="${description}"
-            >
-          `
-          : ""
-      }
-
-
-      <meta
-        itemprop="thumbnailUrl"
-        content="${escapeHTML(thumbnail)}"
-      >
-
-
-      ${
-        publishedAt
-          ? `
-            <meta
-              itemprop="uploadDate"
-              content="${escapeHTML(publishedAt)}"
-            >
-          `
-          : ""
-      }
-
-
-      <meta
-        itemprop="embedUrl"
-        content="${embedUrl}"
-      >
-
-
-      <meta
-        itemprop="url"
-        content="https://www.youtube.com/watch?v=${encodeURIComponent(id)}"
-      >
-
 
       <div class="youtube-frame">
 
@@ -748,17 +498,13 @@ function videoCard(video) {
       </div>
 
 
-      <div
-        class="youtube-card-title"
-        itemprop="name"
-      >
+      <div class="youtube-card-title">
         ${title}
       </div>
 
     </article>
 
   `;
-
 }
 
 
@@ -783,9 +529,7 @@ function renderGrid(
       : videos.slice(0, limit);
 
 
-  if (
-    !visibleVideos.length
-  ) {
+  if (!visibleVideos.length) {
 
     element.innerHTML = `
       <div class="loading">
@@ -794,7 +538,6 @@ function renderGrid(
     `;
 
     return;
-
   }
 
 
@@ -817,9 +560,7 @@ function updateCount(
 ) {
 
   const element =
-    document.getElementById(
-      elementId
-    );
+    document.getElementById(elementId);
 
 
   if (!element) {
@@ -840,19 +581,13 @@ function updateCount(
 async function loadYouTube() {
 
   const videosGrid =
-    document.getElementById(
-      "videosGrid"
-    );
+    document.getElementById("videosGrid");
 
   const liveGrid =
-    document.getElementById(
-      "liveGrid"
-    );
+    document.getElementById("liveGrid");
 
   const shortsGrid =
-    document.getElementById(
-      "shortsGrid"
-    );
+    document.getElementById("shortsGrid");
 
 
   if (
@@ -866,56 +601,35 @@ async function loadYouTube() {
     );
 
     return;
-
   }
 
 
   try {
 
-    /*
-      Load both files.
-
-      videos.json:
-      Main YouTube content
-
-      videoobjects.json:
-      SEO upload dates
-    */
-
-    const [
-      videosResponse,
-      videoObjectDates
-    ] = await Promise.all([
-
-      fetch(
+    const response =
+      await fetch(
         `videos.json?ts=${Date.now()}`,
         {
           cache: "no-store"
         }
-      ),
-
-      loadVideoObjectData()
-
-    ]);
+      );
 
 
-    if (!videosResponse.ok) {
+    if (!response.ok) {
 
       throw new Error(
-        `videos.json returned ${videosResponse.status}`
+        `videos.json returned ${response.status}`
       );
 
     }
 
 
     const data =
-      await videosResponse.json();
+      await response.json();
 
 
     const allVideos =
-      Array.isArray(
-        data.videos
-      )
+      Array.isArray(data.videos)
         ? data.videos
         : [];
 
@@ -926,83 +640,38 @@ async function loadYouTube() {
 
     const uniqueVideos = [];
 
-    const seen =
-      new Set();
+    const seen = new Set();
 
 
-    allVideos.forEach(
-      (video) => {
+    allVideos.forEach((video) => {
 
-        if (
-          !video ||
-          typeof video !== "object"
-        ) {
+      if (
+        !video ||
+        typeof video !== "object"
+      ) {
 
-          return;
-
-        }
-
-
-        const id =
-          String(
-            video.id || ""
-          ).trim();
-
-
-        if (
-          !id ||
-          seen.has(id)
-        ) {
-
-          return;
-
-        }
-
-
-        seen.add(id);
-
-
-        /*
-          Find upload date from
-          videoobjects.json if videos.json
-          doesn't already contain one.
-        */
-
-        const existingDate =
-          getVideoDate(video);
-
-
-        const seoDate =
-          videoObjectDates.get(
-            id
-          );
-
-
-        const finalDate =
-          existingDate ||
-          seoDate ||
-          null;
-
-
-        uniqueVideos.push({
-
-          ...video,
-
-          id,
-
-          ...(finalDate
-            ? {
-                uploadDate:
-                  finalDate,
-                publishedAt:
-                  finalDate
-              }
-            : {})
-
-        });
-
+        return;
       }
-    );
+
+
+      const id =
+        getVideoId(video);
+
+
+      if (!id || seen.has(id)) {
+        return;
+      }
+
+
+      seen.add(id);
+
+
+      uniqueVideos.push({
+        ...video,
+        id
+      });
+
+    });
 
 
     /* =====================================
@@ -1085,15 +754,7 @@ async function loadYouTube() {
        VIDEO SEO
     ===================================== */
 
-    addVideoSEO([
-
-      ...normalVideos,
-
-      ...shorts,
-
-      ...liveVideos
-
-    ]);
+    addVideoSEO(uniqueVideos);
 
 
     /* =====================================
@@ -1125,11 +786,17 @@ async function loadYouTube() {
 
 
     /* =====================================
-       CONSOLE INFORMATION
+       CONSOLE
     ===================================== */
 
     console.log(
       "YouTube sync successful"
+    );
+
+
+    console.log(
+      "Total content:",
+      uniqueVideos.length
     );
 
 
@@ -1152,14 +819,10 @@ async function loadYouTube() {
 
 
     console.log(
-      "VideoObject dates:",
-      videoObjectDates.size
-    );
-
-
-    console.log(
-      "Video SEO:",
-      "Enabled"
+      "Videos with uploadDate:",
+      uniqueVideos.filter(
+        video => getVideoDate(video)
+      ).length
     );
 
 
@@ -1253,7 +916,6 @@ function setupViewAll(
     ) {
 
       return;
-
     }
 
 
