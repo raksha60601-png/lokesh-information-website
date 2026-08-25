@@ -1,12 +1,13 @@
 {
   "articles": [
     {
+      "id": "whatsapp-5-settings",
       "title": "WhatsApp की ये 5 Settings अभी बदलें",
       "category": "WhatsApp",
       "date": "2026-08-25",
       "excerpt": "WhatsApp की कुछ जरूरी settings बदलकर privacy, security और daily use को बेहतर बनाया जा सकता है।",
       "image": "",
-      "url": ""
+      "content": "<p>WhatsApp का इस्तेमाल आज लगभग हर स्मार्टफोन यूजर करता है। लेकिन WhatsApp की कुछ ऐसी settings हैं जिन्हें बदलकर आप अपनी privacy, security और daily experience को बेहतर बना सकते हैं।</p><h2>1. Privacy Settings जरूर चेक करें</h2><p>WhatsApp की Privacy Settings में जाकर यह तय करें कि आपकी profile photo, last seen और अन्य जानकारी कौन देख सकता है।</p><h2>2. Unknown Calls को Silence करें</h2><p>अगर आपको अनजान नंबरों से बार-बार WhatsApp calls आती हैं, तो Silence Unknown Callers का इस्तेमाल कर सकते हैं।</p><h2>3. Two-Step Verification चालू करें</h2><p>अपने WhatsApp account की security बढ़ाने के लिए Two-Step Verification जरूर enable करें।</p><h2>4. Automatic Media Download को Manage करें</h2><p>Photos और videos अपने आप download होने से storage जल्दी भर सकता है। Media auto-download settings को अपनी जरूरत के अनुसार बदलें।</p><h2>5. Linked Devices चेक करें</h2><p>WhatsApp के Linked Devices section में जाकर देखें कि आपका account किन devices पर connected है। कोई अनजान device दिखाई दे तो उसे तुरंत logout करें।</p><h2>निष्कर्ष</h2><p>इन settings को सही तरीके से configure करके आप WhatsApp को ज्यादा secure और convenient बना सकते हैं।</p>"
     }
   ]
 }
