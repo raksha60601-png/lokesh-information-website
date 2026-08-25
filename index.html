@@ -345,6 +345,45 @@
 
     </section>
 
+    <!-- =========================================================
+     ARTICLES
+========================================================= -->
+
+<section id="articles" class="articles-home">
+
+  <div class="heading">
+
+    <span>LOKESH INFORMATION</span>
+
+    <h2>Latest Tech Articles</h2>
+
+    <p>
+      WhatsApp, Mobile, AI, Apps, Gadgets और Technology से जुड़ी
+      आसान Hindi और Hinglish जानकारी।
+    </p>
+
+  </div>
+
+  <div id="homeArticles" class="articles-home-grid">
+
+    <div class="article-loading">
+      Articles loading…
+    </div>
+
+  </div>
+
+  <div style="text-align:center;margin-top:25px;">
+
+    <a
+      href="articles.html"
+      class="btn"
+    >
+      सभी Articles देखें →
+    </a>
+
+  </div>
+
+</section>
 
     <!-- ===================================================
          YOUTUBE CONTENT
@@ -975,6 +1014,76 @@
   ====================================================== -->
 
   <script src="script.js"></script>
+<script>
+  
+fetch("articles.json?ts=" + Date.now())
+  .then(response => response.json())
+  .then(data => {
 
+    const articles = Array.isArray(data)
+      ? data
+      : (data.articles || []);
+
+    const box = document.getElementById("homeArticles");
+
+    if (!box) return;
+
+    if (!articles.length) {
+      box.innerHTML =
+        "<div class='article-loading'>अभी कोई Article उपलब्ध नहीं है।</div>";
+      return;
+    }
+
+    box.innerHTML = articles.slice(0, 3).map(article => {
+
+      const id = article.id || "";
+
+      return `
+        <article class="article-home-card">
+
+          <div class="article-home-content">
+
+            <span class="article-home-category">
+              ${article.category || "TECH"}
+            </span>
+
+            <h3>
+              ${article.title || "Tech Article"}
+            </h3>
+
+            <p>
+              ${article.excerpt || ""}
+            </p>
+
+            <small>
+              ${article.date || ""}
+            </small>
+
+            <br>
+
+            <a
+              href="${
+                id
+                ? "article.html?id=" + encodeURIComponent(id)
+                : "articles.html"
+              }"
+              class="article-read"
+            >
+              Read Article →
+            </a>
+
+          </div>
+
+        </article>
+      `;
+
+    }).join("");
+
+  })
+  .catch(error => {
+    console.error("Articles error:", error);
+  });
+</script>
+  
 </body>
 </html>
