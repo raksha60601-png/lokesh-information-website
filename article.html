@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8">
+
+  <title>Article | Lokesh Information</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta
+    name="description"
+    id="metaDescription"
+    content="Lokesh Information Tech Article"
+  >
+
+  <meta
+    name="robots"
+    content="index, follow, max-image-preview:large"
+  >
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+
+  <style>
+
+    .article-page{
+      width:min(850px,92%);
+      margin:auto;
+      padding:55px 0 80px;
+    }
+
+    .article-back{
+      display:inline-block;
+      margin-bottom:25px;
+      color:#36e6ff;
+      font-size:12px;
+      font-weight:bold;
+    }
+
+    .article-category{
+      color:#36e6ff;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+
+    .article-page h1{
+      font-size:clamp(32px,5vw,55px);
+      line-height:1.15;
+      margin:12px 0;
+    }
+
+    .article-date{
+      color:#71828e;
+      font-size:11px;
+      margin-bottom:25px;
+    }
+
+    .article-cover{
+      width:100%;
+      max-height:500px;
+      object-fit:cover;
+      border-radius:18px;
+      margin:25px 0 35px;
+      border:1px solid rgba(80,220,255,.14);
+    }
+
+    .article-content{
+      color:#cbd9df;
+      font-size:16px;
+      line-height:1.9;
+    }
+
+    .article-content h2{
+      color:#eefaff;
+      margin-top:35px;
+      font-size:26px;
+    }
+
+    .article-content p{
+      margin:18px 0;
+    }
+
+    .article-content ul{
+      padding-left:25px;
+    }
+
+    .article-content li{
+      margin:10px 0;
+    }
+
+    .article-share{
+      margin-top:40px;
+      padding:20px;
+      border:1px solid rgba(80,220,255,.14);
+      border-radius:15px;
+      background:rgba(255,255,255,.025);
+    }
+
+    .article-share a{
+      color:#36e6ff;
+      font-weight:bold;
+    }
+
+    @media(max-width:600px){
+
+      .article-page{
+        padding-top:35px;
+      }
+
+      .article-content{
+        font-size:15px;
+      }
+
+      .article-page h1{
+        font-size:32px;
+      }
+
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <main class="article-page">
+
+    <a
+      class="article-back"
+      href="articles.html"
+    >
+      ← सभी Articles
+    </a>
+
+    <div
+      id="article"
+    >
+      Article loading…
+    </div>
+
+  </main>
+
+
+  <script>
+
+    const articleBox =
+      document.getElementById("article");
+
+    const params =
+      new URLSearchParams(window.location.search);
+
+    const articleId =
+      params.get("id");
+
+
+    fetch("articles.json?ts=" + Date.now())
+
+      .then(response => {
+
+        if(!response.ok){
+          throw new Error("articles.json not found");
+        }
+
+        return response.json();
+
+      })
+
+      .then(data => {
+
+        const articles =
+          Array.isArray(data)
+            ? data
+            : data.articles || [];
+
+        const article =
+          articles.find(item => item.id === articleId);
+
+
+        if(!article){
+
+          articleBox.innerHTML = `
+            <h1>Article नहीं मिला</h1>
+            <p>
+              यह article उपलब्ध नहीं है या इसका link गलत है।
+            </p>
+          `;
+
+          return;
+
+        }
+
+
+        document.title =
+          article.title + " | Lokesh Information";
+
+
+        document
+          .getElementById("metaDescription")
+          .setAttribute(
+            "content",
+            article.excerpt || article.title
+          );
+
+
+        articleBox.innerHTML = `
+
+          <div class="article-category">
+            ${article.category || "TECH"}
+          </div>
+
+          <h1>
+            ${article.title}
+          </h1>
+
+          <div class="article-date">
+            ${article.date || ""}
+          </div>
+
+          ${
+            article.image
+            ? `
+              <img
+                class="article-cover"
+                src="${article.image}"
+                alt="${article.title}"
+              >
+            `
+            : ""
+          }
+
+          <div class="article-content">
+
+            ${
+              article.content ||
+              `<p>${article.excerpt || ""}</p>`
+            }
+
+          </div>
+
+          <div class="article-share">
+
+            📱 यह Article पसंद आया?
+
+            <br><br>
+
+            अपने दोस्तों के साथ Share करें और
+            <a href="index.html">
+              Lokesh Information
+            </a>
+            पर ऐसे ही Tech Articles पढ़ें।
+
+          </div>
+
+        `;
+
+      })
+
+      .catch(error => {
+
+        console.error(error);
+
+        articleBox.innerHTML = `
+          <h1>Article Load नहीं हो पाया</h1>
+          <p>
+            कृपया थोड़ी देर बाद दोबारा कोशिश करें।
+          </p>
+        `;
+
+      });
+
+  </script>
+
+</body>
+</html>
