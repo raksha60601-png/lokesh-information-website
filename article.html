@@ -14,8 +14,85 @@
   >
 
   <meta
+    name="author"
+    content="Lokesh Information"
+  >
+
+  <meta
     name="robots"
     content="index, follow, max-image-preview:large"
+  >
+
+  <!-- Canonical will be set automatically for each article -->
+  <link
+    id="canonicalLink"
+    rel="canonical"
+    href="https://raksha60601-png.github.io/lokesh-information-website/article.html"
+  >
+
+  <!-- Open Graph -->
+  <meta
+    property="og:type"
+    id="ogType"
+    content="article"
+  >
+
+  <meta
+    property="og:title"
+    id="ogTitle"
+    content="Article | Lokesh Information"
+  >
+
+  <meta
+    property="og:description"
+    id="ogDescription"
+    content="Lokesh Information Tech Article"
+  >
+
+  <meta
+    property="og:url"
+    id="ogUrl"
+    content="https://raksha60601-png.github.io/lokesh-information-website/article.html"
+  >
+
+  <meta
+    property="og:site_name"
+    content="Lokesh Information"
+  >
+
+  <meta
+    property="og:locale"
+    content="hi_IN"
+  >
+
+  <meta
+    property="og:image"
+    id="ogImage"
+    content=""
+  >
+
+  <!-- Twitter -->
+  <meta
+    name="twitter:card"
+    content="summary_large_image"
+  >
+
+  <meta
+    name="twitter:title"
+    id="twitterTitle"
+    content="Article | Lokesh Information"
+  >
+
+  <meta
+    name="twitter:description"
+    id="twitterDescription"
+    content="Lokesh Information Tech Article"
+  >
+
+  <meta
+    name="twitter:image"
+    id="twitterImage"
+    content=""
   >
 
   <link
@@ -193,17 +270,230 @@
         }
 
 
+        /* =========================
+           BASIC SEO
+        ========================== */
+
+        const title =
+          article.title ||
+          "Tech Article | Lokesh Information";
+
+        const description =
+          article.excerpt ||
+          article.title ||
+          "Lokesh Information Tech Article";
+
+        const articleUrl =
+          window.location.origin +
+          window.location.pathname +
+          "?id=" +
+          encodeURIComponent(article.id);
+
+
         document.title =
-          article.title + " | Lokesh Information";
+          title + " | Lokesh Information";
 
 
         document
           .getElementById("metaDescription")
           .setAttribute(
             "content",
-            article.excerpt || article.title
+            description
           );
 
+
+        /* =========================
+           CANONICAL
+        ========================== */
+
+        document
+          .getElementById("canonicalLink")
+          .setAttribute(
+            "href",
+            articleUrl
+          );
+
+
+        /* =========================
+           OPEN GRAPH
+        ========================== */
+
+        document
+          .getElementById("ogTitle")
+          .setAttribute(
+            "content",
+            title
+          );
+
+        document
+          .getElementById("ogDescription")
+          .setAttribute(
+            "content",
+            description
+          );
+
+        document
+          .getElementById("ogUrl")
+          .setAttribute(
+            "content",
+            articleUrl
+          );
+
+
+        /* =========================
+           TWITTER
+        ========================== */
+
+        document
+          .getElementById("twitterTitle")
+          .setAttribute(
+            "content",
+            title
+          );
+
+        document
+          .getElementById("twitterDescription")
+          .setAttribute(
+            "content",
+            description
+          );
+
+
+        /* =========================
+           IMAGE SEO
+        ========================== */
+
+        if(article.image){
+
+          document
+            .getElementById("ogImage")
+            .setAttribute(
+              "content",
+              new URL(
+                article.image,
+                window.location.href
+              ).href
+            );
+
+          document
+            .getElementById("twitterImage")
+            .setAttribute(
+              "content",
+              new URL(
+                article.image,
+                window.location.href
+              ).href
+            );
+
+        }
+
+
+        /* =========================
+           ARTICLE STRUCTURED DATA
+        ========================== */
+
+        const publishedDate =
+          article.date
+            ? article.date + "T00:00:00+05:30"
+            : undefined;
+
+        const articleSchema = {
+
+          "@context":
+            "https://schema.org",
+
+          "@type":
+            "Article",
+
+          "@id":
+            articleUrl + "#article",
+
+          "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": articleUrl
+          },
+
+          "headline":
+            title,
+
+          "description":
+            description,
+
+          "datePublished":
+            publishedDate,
+
+          "dateModified":
+            publishedDate,
+
+          "author": {
+            "@type": "Person",
+            "name": "Lokesh Information",
+            "url":
+              window.location.origin +
+              window.location.pathname.replace(
+                "article.html",
+                ""
+              )
+          },
+
+          "publisher": {
+            "@type": "Organization",
+            "name": "Lokesh Information",
+            "url":
+              window.location.origin +
+              window.location.pathname.replace(
+                "article.html",
+                ""
+              )
+          }
+
+        };
+
+
+        if(article.image){
+
+          articleSchema.image = [
+            new URL(
+              article.image,
+              window.location.href
+            ).href
+          ];
+
+        }
+
+
+        const oldSchema =
+          document.getElementById(
+            "articleStructuredData"
+          );
+
+        if(oldSchema){
+          oldSchema.remove();
+        }
+
+
+        const schemaScript =
+          document.createElement("script");
+
+        schemaScript.type =
+          "application/ld+json";
+
+        schemaScript.id =
+          "articleStructuredData";
+
+        schemaScript.textContent =
+          JSON.stringify(
+            articleSchema
+          );
+
+        document.head.appendChild(
+          schemaScript
+        );
+
+
+        /* =========================
+           ARTICLE CONTENT
+        ========================== */
 
         articleBox.innerHTML = `
 
@@ -226,6 +516,7 @@
                 class="article-cover"
                 src="${article.image}"
                 alt="${article.title}"
+                loading="eager"
               >
             `
             : ""
