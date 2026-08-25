@@ -160,6 +160,23 @@
       background:#071117;
     }
 
+    .article-placeholder{
+      width:100%;
+      aspect-ratio:16/9;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:
+        radial-gradient(
+          circle at center,
+          rgba(54,230,255,.16),
+          #071117 65%
+        );
+      color:#36e6ff;
+      font-size:28px;
+      font-weight:bold;
+    }
+
     .article-content{
       padding:18px;
     }
@@ -221,6 +238,7 @@
     }
 
     @media(max-width:600px){
+
       header{
         padding:12px 16px;
       }
@@ -318,26 +336,153 @@
 
 
   <footer>
-
     © 2026 Lokesh Information • Tech • News • Gadgets • AI
-
   </footer>
 
 
   <script>
 
-    /*
-      Articles will be loaded automatically
-      from articles.json.
-
-      बाद में नया Article डालने के लिए
-      नई HTML file बनाने की जरूरत नहीं होगी।
-    */
-
     const articlesGrid =
       document.getElementById("articles");
 
+
     fetch("articles.json?ts=" + Date.now())
+
       .then(response => {
 
-        if(!
+        if(!response.ok){
+          throw new Error("articles.json not found");
+        }
+
+        return response.json();
+
+      })
+
+      .then(data => {
+
+        const articles =
+          Array.isArray(data)
+            ? data
+            : (data.articles || []);
+
+
+        if(!articles.length){
+
+          articlesGrid.innerHTML = `
+            <div class="empty">
+              अभी कोई Article उपलब्ध नहीं है।
+            </div>
+          `;
+
+          return;
+
+        }
+
+
+        articlesGrid.innerHTML =
+          articles.map(article => {
+
+            const id =
+              article.id || "";
+
+            const title =
+              article.title || "Untitled Article";
+
+            const category =
+              article.category || "TECH";
+
+            const excerpt =
+              article.excerpt || "";
+
+            const date =
+              article.date || "";
+
+
+            const image =
+              article.image || "";
+
+
+            return `
+
+              <article class="article-card">
+
+                ${
+                  image
+                  ? `
+                    <img
+                      class="article-image"
+                      src="${image}"
+                      alt="${title}"
+                      loading="lazy"
+                    >
+                  `
+                  : `
+                    <div
+                      class="article-placeholder"
+                      aria-hidden="true"
+                    >
+                      TECH
+                    </div>
+                  `
+                }
+
+
+                <div class="article-content">
+
+                  <div class="article-category">
+                    ${category}
+                  </div>
+
+                  <h2 class="article-title">
+                    ${title}
+                  </h2>
+
+                  <p class="article-excerpt">
+                    ${excerpt}
+                  </p>
+
+                  <div class="article-date">
+                    ${date}
+                  </div>
+
+                  ${
+                    id
+                    ? `
+                      <a
+                        class="read-more"
+                        href="article.html?id=${encodeURIComponent(id)}"
+                      >
+                        Read Article →
+                      </a>
+                    `
+                    : ""
+                  }
+
+                </div>
+
+              </article>
+
+            `;
+
+          }).join("");
+
+      })
+
+      .catch(error => {
+
+        console.error(error);
+
+        articlesGrid.innerHTML = `
+          <div class="empty">
+            Articles load नहीं हो पाए।
+            <br><br>
+            कृपया थोड़ी देर बाद दोबारा कोशिश करें।
+          </div>
+        `;
+
+      });
+
+  </script>
+
+</body>
+</html>
