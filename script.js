@@ -475,11 +475,18 @@ function videoCard(video) {
     `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
 
 
-  const embedUrl =
-    `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
+  const videoUrl =
+  `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
 
+return `
 
-  return `
+  <a
+    href="${videoUrl}"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="youtube-card-link"
+    aria-label="YouTube पर ${title} देखें"
+  >
 
     <article
       class="youtube-card ${typeClass}"
@@ -487,16 +494,17 @@ function videoCard(video) {
 
       <div class="youtube-frame">
 
-        <iframe
-          src="${embedUrl}?rel=0"
-          title="${title}"
+        <img
+          src="${thumbnail}"
+          alt="${title}"
           loading="lazy"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowfullscreen>
-        </iframe>
+        >
+
+        <div class="youtube-play-button">
+          ▶
+        </div>
 
       </div>
-
 
       <div class="youtube-card-title">
         ${title}
@@ -504,7 +512,9 @@ function videoCard(video) {
 
     </article>
 
-  `;
+  </a>
+
+`;
 }
 
 
