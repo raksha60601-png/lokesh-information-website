@@ -437,11 +437,9 @@ function videoCard(video) {
   const id =
     getVideoId(video);
 
-
   if (!id) {
     return "";
   }
-
 
   const title =
     escapeHTML(
@@ -449,18 +447,15 @@ function videoCard(video) {
       "Lokesh Information Video"
     );
 
-
   const description =
     escapeHTML(
       video.description ||
       ""
     );
 
-
   const type =
     video.type ||
     "video";
-
 
   const typeClass =
     type === "short"
@@ -469,24 +464,14 @@ function videoCard(video) {
       ? "live-card"
       : "video-card";
 
-
   const thumbnail =
     video.thumbnail ||
     `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
 
+  const embedUrl =
+    `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
 
-  const videoUrl =
-  `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
-
-return `
-
-  <a
-    href="${videoUrl}"
-    target="_blank"
-    rel="noopener noreferrer"
-    class="youtube-card-link"
-    aria-label="YouTube पर ${title} देखें"
-  >
+  return `
 
     <article
       class="youtube-card ${typeClass}"
@@ -494,15 +479,13 @@ return `
 
       <div class="youtube-frame">
 
-        <img
-          src="${thumbnail}"
-          alt="${title}"
+        <iframe
+          src="${embedUrl}?rel=0"
+          title="${title}"
           loading="lazy"
-        >
-
-        <div class="youtube-play-button">
-          ▶
-        </div>
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen>
+        </iframe>
 
       </div>
 
@@ -512,9 +495,7 @@ return `
 
     </article>
 
-  </a>
-
-`;
+  `;
 }
 
 
