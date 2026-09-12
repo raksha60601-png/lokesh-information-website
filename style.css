@@ -1336,3 +1336,15 @@ footer>small{
     font-size: 28px;
   }
 }
+
+/* =========================================
+   LEGAL / INFORMATION PAGES
+========================================= */
+.legal-page{width:min(900px,92%);margin:auto;padding:55px 0 80px}
+.legal-page h1{margin-bottom:10px}
+.legal-page h2{margin-top:32px}
+.legal-page p,.legal-page li{color:#b8c7d0;line-height:1.8}
+.legal-page a{color:#36e6ff}
+.legal-updated{color:#718390;font-size:13px}
+.legal-nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:30px}
+.legal-nav a{padding:9px 13px;border:1px solid rgba(54,230,255,.2);border-radius:10px}

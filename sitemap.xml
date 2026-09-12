@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://raksha60601-png.github.io/lokesh-information-website/</loc>
-  </url>
+  <url><loc>https://raksha60601-png.github.io/lokesh-information-website/</loc></url>
+  <url><loc>https://raksha60601-png.github.io/lokesh-information-website/articles.html</loc></url>
+  <url><loc>https://raksha60601-png.github.io/lokesh-information-website/about.html</loc></url>
+  <url><loc>https://raksha60601-png.github.io/lokesh-information-website/contact.html</loc></url>
+  <url><loc>https://raksha60601-png.github.io/lokesh-information-website/privacy-policy.html</loc></url>
+  <url><loc>https://raksha60601-png.github.io/lokesh-information-website/terms.html</loc></url>
 </urlset>
